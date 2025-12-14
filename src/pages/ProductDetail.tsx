@@ -6,9 +6,10 @@ import { getProductById, getFarmerById } from '@/data/mockData';
 import { useCart } from '@/context/CartContext';
 import { formatPrice, formatDate } from '@/lib/format';
 import { STATES } from '@/types';
-import { Star, MapPin, Minus, Plus, ShoppingCart, ArrowLeft, User, Calendar } from 'lucide-react';
+import { Star, MapPin, Minus, Plus, ShoppingCart, ArrowLeft, Calendar } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { ProductReviews } from '@/components/reviews/ProductReviews';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -173,6 +174,11 @@ const ProductDetail = () => {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="mt-12">
+          <ProductReviews productId={product.id} />
         </div>
       </div>
     </Layout>

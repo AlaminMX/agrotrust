@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      delivery_addresses: {
+        Row: {
+          address: string
+          city: string
+          created_at: string
+          full_name: string
+          id: string
+          is_default: boolean
+          label: string
+          phone: string
+          state: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          city: string
+          created_at?: string
+          full_name: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          phone: string
+          state: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          city?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          phone?: string
+          state?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       farmer_profiles: {
         Row: {
           address: string | null
@@ -297,6 +339,7 @@ export type Database = {
       products: {
         Row: {
           available_quantity: number
+          average_rating: number | null
           category: string
           created_at: string
           description: string | null
@@ -306,11 +349,13 @@ export type Database = {
           is_active: boolean
           name: string
           price: number
+          review_count: number | null
           unit: string
           updated_at: string
         }
         Insert: {
           available_quantity?: number
+          average_rating?: number | null
           category: string
           created_at?: string
           description?: string | null
@@ -320,11 +365,13 @@ export type Database = {
           is_active?: boolean
           name: string
           price: number
+          review_count?: number | null
           unit?: string
           updated_at?: string
         }
         Update: {
           available_quantity?: number
+          average_rating?: number | null
           category?: string
           created_at?: string
           description?: string | null
@@ -334,6 +381,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           price?: number
+          review_count?: number | null
           unit?: string
           updated_at?: string
         }
@@ -388,6 +436,54 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          order_id: string
+          product_id: string
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          order_id: string
+          product_id: string
+          rating: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string
+          product_id?: string
+          rating?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

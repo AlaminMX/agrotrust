@@ -15,6 +15,7 @@ import TrackOrder from "./pages/TrackOrder";
 import HowItWorks from "./pages/HowItWorks";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
+import Profile from "./pages/Profile";
 import FarmerOnboarding from "./pages/farmer/FarmerOnboarding";
 import FarmerDashboard from "./pages/farmer/FarmerDashboard";
 import AddProduct from "./pages/farmer/AddProduct";
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/profile" element={<Profile />} />
               {/* Farmer Routes */}
               <Route path="/farmer/onboarding" element={<FarmerOnboarding />} />
               <Route path="/farmer/dashboard" element={<FarmerDashboard />} />
