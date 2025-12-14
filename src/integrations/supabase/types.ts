@@ -354,7 +354,10 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          onboarding_completed: boolean
           phone: string | null
+          preferred_state: string | null
+          produce_interests: string[] | null
           updated_at: string
           user_id: string
         }
@@ -364,7 +367,10 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          onboarding_completed?: boolean
           phone?: string | null
+          preferred_state?: string | null
+          produce_interests?: string[] | null
           updated_at?: string
           user_id: string
         }
@@ -374,7 +380,10 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          onboarding_completed?: boolean
           phone?: string | null
+          preferred_state?: string | null
+          produce_interests?: string[] | null
           updated_at?: string
           user_id?: string
         }
