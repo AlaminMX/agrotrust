@@ -26,10 +26,37 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check if user has completed onboarding
+  // Check if user has completed onboarding or is admin
   useEffect(() => {
-    const checkOnboarding = async () => {
+    const checkUserAndRedirect = async () => {
       if (user) {
+        // Check if user is admin
+        const { data: adminRole } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+
+        if (adminRole) {
+          navigate('/admin');
+          return;
+        }
+
+        // Check if user is farmer
+        const { data: farmerRole } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'farmer')
+          .maybeSingle();
+
+        if (farmerRole) {
+          navigate('/farmer/dashboard');
+          return;
+        }
+
+        // Check onboarding status for consumers
         const { data: profile } = await supabase
           .from('profiles')
           .select('onboarding_completed')
@@ -43,7 +70,7 @@ export default function Auth() {
         }
       }
     };
-    checkOnboarding();
+    checkUserAndRedirect();
   }, [user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
