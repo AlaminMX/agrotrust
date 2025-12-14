@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/context/CartContext";
+import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -30,37 +31,39 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <CartProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/products/:id" element={<ProductDetail />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/order/:orderId" element={<OrderTracking />} />
-            <Route path="/track-order" element={<TrackOrder />} />
-            <Route path="/how-it-works" element={<HowItWorks />} />
-            <Route path="/auth" element={<Auth />} />
-            {/* Farmer Routes */}
-            <Route path="/farmer/onboarding" element={<FarmerOnboarding />} />
-            <Route path="/farmer/dashboard" element={<FarmerDashboard />} />
-            <Route path="/farmer/products/add" element={<AddProduct />} />
-            <Route path="/farmer/products/:id/edit" element={<EditProduct />} />
-            <Route path="/farmer/orders/:orderId" element={<FarmerOrderDetail />} />
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/verifications" element={<FarmerVerifications />} />
-            <Route path="/admin/orders" element={<AdminOrders />} />
-            <Route path="/admin/orders/:orderId" element={<AdminOrderDetail />} />
-            <Route path="/admin/disputes" element={<DisputeResolution />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/products/:id" element={<ProductDetail />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/order/:orderId" element={<OrderTracking />} />
+              <Route path="/track-order" element={<TrackOrder />} />
+              <Route path="/how-it-works" element={<HowItWorks />} />
+              <Route path="/auth" element={<Auth />} />
+              {/* Farmer Routes */}
+              <Route path="/farmer/onboarding" element={<FarmerOnboarding />} />
+              <Route path="/farmer/dashboard" element={<FarmerDashboard />} />
+              <Route path="/farmer/products/add" element={<AddProduct />} />
+              <Route path="/farmer/products/:id/edit" element={<EditProduct />} />
+              <Route path="/farmer/orders/:orderId" element={<FarmerOrderDetail />} />
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/verifications" element={<FarmerVerifications />} />
+              <Route path="/admin/orders" element={<AdminOrders />} />
+              <Route path="/admin/orders/:orderId" element={<AdminOrderDetail />} />
+              <Route path="/admin/disputes" element={<DisputeResolution />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </CartProvider>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
