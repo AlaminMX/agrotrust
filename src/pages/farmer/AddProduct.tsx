@@ -100,6 +100,7 @@ export default function AddProduct() {
           available_quantity: parseInt(availableQuantity),
           image_url: imageUrl,
           is_active: true,
+          state: farmerProfile.state, // Auto-assign farmer's state
         });
       
       if (error) throw error;
