@@ -14,16 +14,419 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      farmer_profiles: {
+        Row: {
+          address: string | null
+          bank_account_name: string | null
+          bank_account_number: string | null
+          bank_name: string | null
+          certification_urls: string[] | null
+          created_at: string
+          farm_description: string | null
+          farm_name: string
+          farm_registration_url: string | null
+          farm_size: string | null
+          id: string
+          id_document_url: string | null
+          pending_payout: number | null
+          produce_types: string[] | null
+          state: string
+          total_earnings: number | null
+          updated_at: string
+          user_id: string
+          verification_notes: string | null
+          verification_status: Database["public"]["Enums"]["verification_status"]
+          verified_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_name?: string | null
+          certification_urls?: string[] | null
+          created_at?: string
+          farm_description?: string | null
+          farm_name: string
+          farm_registration_url?: string | null
+          farm_size?: string | null
+          id?: string
+          id_document_url?: string | null
+          pending_payout?: number | null
+          produce_types?: string[] | null
+          state: string
+          total_earnings?: number | null
+          updated_at?: string
+          user_id: string
+          verification_notes?: string | null
+          verification_status?: Database["public"]["Enums"]["verification_status"]
+          verified_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_name?: string | null
+          certification_urls?: string[] | null
+          created_at?: string
+          farm_description?: string | null
+          farm_name?: string
+          farm_registration_url?: string | null
+          farm_size?: string | null
+          id?: string
+          id_document_url?: string | null
+          pending_payout?: number | null
+          produce_types?: string[] | null
+          state?: string
+          total_earnings?: number | null
+          updated_at?: string
+          user_id?: string
+          verification_notes?: string | null
+          verification_status?: Database["public"]["Enums"]["verification_status"]
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
+      order_items: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          product_id: string | null
+          product_name: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          product_id?: string | null
+          product_name: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_tracking: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          order_id: string
+          status: Database["public"]["Enums"]["order_status"]
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          order_id: string
+          status: Database["public"]["Enums"]["order_status"]
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          order_id?: string
+          status?: Database["public"]["Enums"]["order_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_tracking_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          confirmed_at: string | null
+          consumer_email: string | null
+          consumer_id: string | null
+          consumer_name: string | null
+          consumer_phone: string | null
+          created_at: string
+          delivered_at: string | null
+          delivery_address: string
+          delivery_fee: number
+          delivery_state: string
+          escrow_released: boolean
+          escrow_released_at: string | null
+          estimated_delivery: string | null
+          farmer_id: string | null
+          id: string
+          order_number: string
+          payment_reference: string | null
+          status: Database["public"]["Enums"]["order_status"]
+          subtotal: number
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          consumer_email?: string | null
+          consumer_id?: string | null
+          consumer_name?: string | null
+          consumer_phone?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivery_address: string
+          delivery_fee?: number
+          delivery_state: string
+          escrow_released?: boolean
+          escrow_released_at?: string | null
+          estimated_delivery?: string | null
+          farmer_id?: string | null
+          id?: string
+          order_number: string
+          payment_reference?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          subtotal: number
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          consumer_email?: string | null
+          consumer_id?: string | null
+          consumer_name?: string | null
+          consumer_phone?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivery_address?: string
+          delivery_fee?: number
+          delivery_state?: string
+          escrow_released?: boolean
+          escrow_released_at?: string | null
+          estimated_delivery?: string | null
+          farmer_id?: string | null
+          id?: string
+          order_number?: string
+          payment_reference?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          subtotal?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payouts: {
+        Row: {
+          amount: number
+          created_at: string
+          farmer_id: string
+          id: string
+          order_id: string | null
+          payout_reference: string | null
+          processed_at: string | null
+          status: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          farmer_id: string
+          id?: string
+          order_id?: string | null
+          payout_reference?: string | null
+          processed_at?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          farmer_id?: string
+          id?: string
+          order_id?: string | null
+          payout_reference?: string | null
+          processed_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payouts_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payouts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          available_quantity: number
+          category: string
+          created_at: string
+          description: string | null
+          farmer_id: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          price: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          available_quantity?: number
+          category: string
+          created_at?: string
+          description?: string | null
+          farmer_id: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          price: number
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          available_quantity?: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          farmer_id?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          price?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_farmer_profile_id: { Args: { _user_id: string }; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "consumer" | "farmer" | "admin"
+      order_status:
+        | "pending"
+        | "paid"
+        | "processing"
+        | "dispatched"
+        | "out_for_delivery"
+        | "delivered"
+        | "confirmed"
+        | "disputed"
+      verification_status: "pending" | "under_review" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +553,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["consumer", "farmer", "admin"],
+      order_status: [
+        "pending",
+        "paid",
+        "processing",
+        "dispatched",
+        "out_for_delivery",
+        "delivered",
+        "confirmed",
+        "disputed",
+      ],
+      verification_status: ["pending", "under_review", "approved", "rejected"],
+    },
   },
 } as const
