@@ -27,6 +27,7 @@ import AdminOrders from "./pages/admin/AdminOrders";
 import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
 import DisputeResolution from "./pages/admin/DisputeResolution";
 import NotFound from "./pages/NotFound";
+import PaymentCallback from "./pages/PaymentCallback";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/payment/callback" element={<PaymentCallback />} />
               {/* Farmer Routes */}
               <Route path="/farmer/onboarding" element={<FarmerOnboarding />} />
               <Route path="/farmer/dashboard" element={<FarmerDashboard />} />
