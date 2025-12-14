@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,10 +26,24 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Check if user has completed onboarding
   useEffect(() => {
-    if (user) {
-      navigate('/');
-    }
+    const checkOnboarding = async () => {
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('onboarding_completed')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (profile?.onboarding_completed) {
+          navigate('/');
+        } else {
+          navigate('/onboarding');
+        }
+      }
+    };
+    checkOnboarding();
   }, [user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -108,9 +123,9 @@ export default function Auth() {
     } else {
       toast({
         title: 'Welcome to AgroTrust!',
-        description: 'Your account has been created successfully.',
+        description: 'Let\'s set up your preferences.',
       });
-      navigate('/');
+      navigate('/onboarding');
     }
   };
 
