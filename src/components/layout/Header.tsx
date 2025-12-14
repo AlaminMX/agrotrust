@@ -1,9 +1,18 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, Menu, X, Leaf } from 'lucide-react';
+import { ShoppingCart, Menu, X, Leaf, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
-import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const navLinks = [
   { href: '/', label: 'Home' },
@@ -13,8 +22,28 @@ const navLinks = [
 
 export const Header = () => {
   const { totalItems } = useCart();
+  const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
   const location = useLocation();
+
+  useEffect(() => {
+    const fetchUserRoles = async () => {
+      if (!user) {
+        setUserRoles([]);
+        return;
+      }
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+      setUserRoles(data?.map(r => r.role) || []);
+    };
+    fetchUserRoles();
+  }, [user]);
+
+  const isFarmer = userRoles.includes('farmer');
+  const isAdmin = userRoles.includes('admin');
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
@@ -57,6 +86,40 @@ export const Header = () => {
               )}
             </Button>
           </Link>
+
+          {/* User Menu */}
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin">Admin Dashboard</Link>
+                  </DropdownMenuItem>
+                )}
+                {isFarmer && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/farmer/dashboard">Farmer Dashboard</Link>
+                  </DropdownMenuItem>
+                )}
+                {!isFarmer && !isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/farmer/onboarding">Become a Farmer</Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={signOut}>Sign Out</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/auth">Sign In</Link>
+            </Button>
+          )}
 
           {/* Mobile Menu Toggle */}
           <Button
