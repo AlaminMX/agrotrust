@@ -83,33 +83,121 @@ const Checkout = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
-    if (!formData.fullName || !formData.email || !formData.phone || !formData.address || !formData.city) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      return;
+    let deliveryInfo: { fullName: string; email: string; phone: string; address: string; city: string };
+    
+    if (useNewAddress || savedAddresses.length === 0) {
+      // Validate new address form
+      if (!formData.fullName || !formData.email || !formData.phone || !formData.address || !formData.city) {
+        toast({
+          title: "Missing information",
+          description: "Please fill in all required fields",
+          variant: "destructive",
+        });
+        return;
+      }
+      deliveryInfo = formData;
+    } else {
+      // Use selected saved address
+      const selectedAddr = savedAddresses.find(a => a.id === selectedAddressId);
+      if (!selectedAddr) {
+        toast({
+          title: "No address selected",
+          description: "Please select a delivery address",
+          variant: "destructive",
+        });
+        return;
+      }
+      deliveryInfo = {
+        fullName: selectedAddr.full_name,
+        email: user?.email || '',
+        phone: selectedAddr.phone,
+        address: selectedAddr.address,
+        city: selectedAddr.city,
+      };
     }
 
     setIsProcessing(true);
 
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // Generate order number
+      const orderNumber = `AGT-${Date.now().toString(36).toUpperCase()}`;
+      
+      // Get farmer_id from first item (assuming single farmer per order for now)
+      const firstProduct = items[0]?.product;
+      
+      // Create order in database
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          order_number: orderNumber,
+          consumer_id: user?.id,
+          consumer_name: deliveryInfo.fullName,
+          consumer_email: deliveryInfo.email,
+          consumer_phone: deliveryInfo.phone,
+          delivery_address: `${deliveryInfo.address}, ${deliveryInfo.city}`,
+          delivery_state: selectedState,
+          subtotal,
+          delivery_fee: deliveryFee,
+          total_amount: total,
+          farmer_id: firstProduct?.farmerId,
+          status: 'pending',
+        })
+        .select()
+        .single();
 
-    // Generate order ID
-    const orderId = `AGT-${Date.now().toString(36).toUpperCase()}`;
+      if (orderError) throw orderError;
 
-    // Clear cart and redirect
-    clearCart();
-    
-    toast({
-      title: "Payment successful!",
-      description: "Your order has been placed. Funds are held in escrow.",
-    });
+      // Create order items
+      const orderItems = items.map(({ product, quantity }) => ({
+        order_id: order.id,
+        product_id: product.id,
+        product_name: product.name,
+        unit_price: product.price,
+        quantity,
+        total_price: product.price * quantity,
+      }));
 
-    navigate(`/order/${orderId}`);
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      // Add initial tracking event
+      await supabase.from('order_tracking').insert({
+        order_id: order.id,
+        status: 'pending',
+        description: 'Order placed, awaiting payment',
+      });
+
+      // Initialize Paystack payment
+      const { data: paymentData, error: paymentError } = await supabase.functions.invoke('paystack-initialize', {
+        body: {
+          email: deliveryInfo.email,
+          amount: total,
+          callback_url: `${window.location.origin}/payment/callback`,
+          metadata: {
+            order_id: order.id,
+            order_number: orderNumber,
+          },
+        },
+      });
+
+      if (paymentError || !paymentData.authorization_url) {
+        throw new Error(paymentData?.error || 'Failed to initialize payment');
+      }
+
+      // Redirect to Paystack
+      window.location.href = paymentData.authorization_url;
+    } catch (error: any) {
+      console.error('Checkout error:', error);
+      toast({
+        title: "Checkout failed",
+        description: error.message || "An error occurred during checkout",
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+    }
   };
 
   if (items.length === 0) {
