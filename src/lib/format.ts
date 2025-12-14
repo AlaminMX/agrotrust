@@ -7,6 +7,8 @@ export const formatPrice = (amount: number): string => {
   }).format(amount);
 };
 
+export const formatNaira = formatPrice;
+
 export const formatDate = (dateString: string): string => {
   return new Intl.DateTimeFormat('en-NG', {
     day: 'numeric',
