@@ -70,6 +70,7 @@ export type Database = {
           farm_size: string | null
           id: string
           id_document_url: string | null
+          paystack_recipient_code: string | null
           pending_payout: number | null
           produce_types: string[] | null
           state: string
@@ -93,6 +94,7 @@ export type Database = {
           farm_size?: string | null
           id?: string
           id_document_url?: string | null
+          paystack_recipient_code?: string | null
           pending_payout?: number | null
           produce_types?: string[] | null
           state: string
@@ -116,6 +118,7 @@ export type Database = {
           farm_size?: string | null
           id?: string
           id_document_url?: string | null
+          paystack_recipient_code?: string | null
           pending_payout?: number | null
           produce_types?: string[] | null
           state?: string
@@ -293,9 +296,11 @@ export type Database = {
           amount: number
           created_at: string
           farmer_id: string
+          farmer_payout: number | null
           id: string
           order_id: string | null
           payout_reference: string | null
+          platform_fee: number | null
           processed_at: string | null
           status: string
         }
@@ -303,9 +308,11 @@ export type Database = {
           amount: number
           created_at?: string
           farmer_id: string
+          farmer_payout?: number | null
           id?: string
           order_id?: string | null
           payout_reference?: string | null
+          platform_fee?: number | null
           processed_at?: string | null
           status?: string
         }
@@ -313,9 +320,11 @@ export type Database = {
           amount?: number
           created_at?: string
           farmer_id?: string
+          farmer_payout?: number | null
           id?: string
           order_id?: string | null
           payout_reference?: string | null
+          platform_fee?: number | null
           processed_at?: string | null
           status?: string
         }

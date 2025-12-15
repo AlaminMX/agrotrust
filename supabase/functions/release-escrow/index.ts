@@ -6,24 +6,24 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const PLATFORM_FEE_PERCENT = 0.10; // 10% platform fee
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get authorization header to verify user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('Missing authorization header');
     }
 
-    // Create client with user's token
     const supabaseClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: authHeader } }
     });
@@ -41,7 +41,7 @@ serve(async (req) => {
 
     console.log(`Processing escrow release for order: ${orderId}, user: ${user.id}`);
 
-    // Verify the order belongs to this consumer and is in deliverable state
+    // Verify the order belongs to this consumer
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('*')
@@ -62,7 +62,26 @@ serve(async (req) => {
       throw new Error('Order must be delivered before confirming receipt');
     }
 
-    // Update order status to confirmed and release escrow
+    // Calculate commission: 10% platform, 90% farmer
+    const subtotal = Number(order.subtotal);
+    const platformFee = Math.round(subtotal * PLATFORM_FEE_PERCENT);
+    const farmerPayout = subtotal - platformFee;
+
+    console.log(`Order subtotal: ${subtotal}, Platform fee (10%): ${platformFee}, Farmer payout: ${farmerPayout}`);
+
+    // Get farmer's transfer recipient code
+    const { data: farmer, error: farmerFetchError } = await supabase
+      .from('farmer_profiles')
+      .select('paystack_recipient_code, pending_payout, total_earnings, farm_name')
+      .eq('id', order.farmer_id)
+      .single();
+
+    if (farmerFetchError || !farmer) {
+      console.error('Farmer not found:', farmerFetchError);
+      throw new Error('Farmer profile not found');
+    }
+
+    // Update order status
     const { error: updateError } = await supabase
       .from('orders')
       .update({
@@ -79,65 +98,95 @@ serve(async (req) => {
     }
 
     // Add tracking event
-    const { error: trackingError } = await supabase
+    await supabase
       .from('order_tracking')
       .insert({
         order_id: orderId,
         status: 'confirmed',
-        description: 'Delivery confirmed by customer. Payment released to farmer.',
+        description: 'Delivery confirmed by customer. Payment being processed for farmer.',
       });
 
-    if (trackingError) {
-      console.error('Error adding tracking event:', trackingError);
-    }
+    // Generate payout reference
+    const payoutReference = `TRF-${orderId.substring(0, 8)}-${Date.now()}`;
 
-    // Create payout entry for farmer
+    // Create payout entry with commission breakdown
     const { error: payoutError } = await supabase
       .from('payouts')
       .insert({
         farmer_id: order.farmer_id,
         order_id: orderId,
-        amount: order.subtotal, // Farmer gets subtotal (excluding delivery fee)
-        status: 'pending',
+        amount: subtotal,
+        platform_fee: platformFee,
+        farmer_payout: farmerPayout,
+        payout_reference: payoutReference,
+        status: farmer.paystack_recipient_code ? 'processing' : 'pending',
       });
 
     if (payoutError) {
       console.error('Error creating payout:', payoutError);
     }
 
+    // Attempt automatic transfer if farmer has recipient code
+    let transferInitiated = false;
+    if (farmer.paystack_recipient_code && paystackSecretKey) {
+      try {
+        console.log(`Initiating Paystack transfer to ${farmer.farm_name}`);
+        
+        const transferResponse = await fetch('https://api.paystack.co/transfer', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${paystackSecretKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            source: 'balance',
+            amount: farmerPayout * 100, // Paystack uses kobo
+            recipient: farmer.paystack_recipient_code,
+            reason: `Payment for order ${order.order_number}`,
+            reference: payoutReference,
+          }),
+        });
+
+        const transferData = await transferResponse.json();
+
+        if (transferData.status) {
+          console.log(`Transfer initiated successfully: ${payoutReference}`);
+          transferInitiated = true;
+          
+          // Update payout status
+          await supabase
+            .from('payouts')
+            .update({ status: 'processing' })
+            .eq('payout_reference', payoutReference);
+        } else {
+          console.error('Transfer failed:', transferData.message);
+        }
+      } catch (transferError) {
+        console.error('Transfer error:', transferError);
+      }
+    } else {
+      console.log('No recipient code found or Paystack not configured - payout marked as pending for manual processing');
+    }
+
     // Update farmer's pending payout balance
-    const { error: farmerError } = await supabase
+    await supabase
       .from('farmer_profiles')
       .update({
-        pending_payout: supabase.rpc('increment_pending_payout', { 
-          farmer_id: order.farmer_id, 
-          amount: order.subtotal 
-        })
+        pending_payout: (farmer.pending_payout || 0) + farmerPayout,
       })
       .eq('id', order.farmer_id);
-
-    // Simple increment instead of RPC
-    const { data: farmerData } = await supabase
-      .from('farmer_profiles')
-      .select('pending_payout, total_earnings')
-      .eq('id', order.farmer_id)
-      .single();
-
-    if (farmerData) {
-      await supabase
-        .from('farmer_profiles')
-        .update({
-          pending_payout: (farmerData.pending_payout || 0) + order.subtotal,
-        })
-        .eq('id', order.farmer_id);
-    }
 
     console.log(`Escrow released successfully for order: ${orderId}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Delivery confirmed and payment released to farmer' 
+        message: transferInitiated 
+          ? 'Delivery confirmed! Payment is being transferred to the farmer.' 
+          : 'Delivery confirmed! Payment will be processed for the farmer.',
+        platformFee,
+        farmerPayout,
+        transferInitiated,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

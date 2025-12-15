@@ -2,3 +2,15 @@ project_id = "zvvmahabgsjurfeygirg"
 
 [functions.release-escrow]
 verify_jwt = true
+
+[functions.paystack-initialize]
+verify_jwt = true
+
+[functions.paystack-verify]
+verify_jwt = false
+
+[functions.create-transfer-recipient]
+verify_jwt = true
+
+[functions.paystack-webhook]
+verify_jwt = false
