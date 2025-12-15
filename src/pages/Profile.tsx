@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { User, Package, MapPin, Settings, Star, Plus, Pencil, Trash2, Check, Phone, Mail } from 'lucide-react';
+import { User, Package, MapPin, Settings, Star, Plus, Pencil, Trash2, Check, Phone, Mail, HelpCircle, MessageCircle, LogOut } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
 import { STATES, CATEGORIES, State, ProductCategory } from '@/types';
 import { cn } from '@/lib/utils';
@@ -196,7 +196,7 @@ export default function Profile() {
 
       <div className="container py-8">
         <Tabs defaultValue="orders" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-flex">
             <TabsTrigger value="orders" className="gap-2">
               <Package className="h-4 w-4" />
               <span className="hidden sm:inline">Orders</span>
@@ -212,6 +212,10 @@ export default function Profile() {
             <TabsTrigger value="account" className="gap-2">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Account</span>
+            </TabsTrigger>
+            <TabsTrigger value="support" className="gap-2">
+              <HelpCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Help</span>
             </TabsTrigger>
           </TabsList>
 
@@ -422,6 +426,88 @@ export default function Profile() {
                 </Button>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Support Tab */}
+          <TabsContent value="support">
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageCircle className="h-5 w-5" />
+                    Contact Support
+                  </CardTitle>
+                  <CardDescription>Get help with your orders or account</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                      <Phone className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium">Phone Support</p>
+                        <p className="text-sm text-muted-foreground">+234 800 123 4567</p>
+                        <p className="text-xs text-muted-foreground">Mon-Sat: 8am - 6pm</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                      <Mail className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium">Email Support</p>
+                        <p className="text-sm text-muted-foreground">support@agrotrust.ng</p>
+                        <p className="text-xs text-muted-foreground">Response within 24 hours</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <HelpCircle className="h-5 w-5" />
+                    Quick Help
+                  </CardTitle>
+                  <CardDescription>Common questions and resources</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <Button variant="outline" className="w-full justify-start" asChild>
+                      <Link to="/how-it-works">How does AgroTrust work?</Link>
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start" asChild>
+                      <Link to="/track-order">Track my order</Link>
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start">
+                      Payment & Refund Policy
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start">
+                      Delivery Information
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start" asChild>
+                      <Link to="/farmer/onboarding">Become a Seller</Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle>Account Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-3">
+                  <Button variant="outline" onClick={async () => {
+                    await supabase.auth.signOut();
+                    navigate('/');
+                  }}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </Button>
+                  <Button variant="outline" className="text-destructive hover:text-destructive">
+                    Delete Account
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
