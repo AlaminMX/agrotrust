@@ -1,17 +1,19 @@
 import { Layout } from '@/components/layout/Layout';
-import { HeroSection } from '@/components/home/HeroSection';
-import { HowItWorksSection } from '@/components/home/HowItWorksSection';
-import { FeaturedProducts } from '@/components/home/FeaturedProducts';
+import { BannerCarousel } from '@/components/home/BannerCarousel';
+import { CategoryGrid } from '@/components/home/CategoryGrid';
+import { FlashDeals } from '@/components/home/FlashDeals';
+import { FeaturedProductsSection } from '@/components/home/FeaturedProductsSection';
+import { TrustBanner } from '@/components/home/TrustBanner';
 import { EscrowExplainer } from '@/components/home/EscrowExplainer';
-import { TrustStats } from '@/components/home/TrustStats';
 
 const Index = () => {
   return (
     <Layout>
-      <HeroSection />
-      <TrustStats />
-      <FeaturedProducts />
-      <HowItWorksSection />
+      <BannerCarousel />
+      <TrustBanner />
+      <CategoryGrid />
+      <FlashDeals />
+      <FeaturedProductsSection />
       <EscrowExplainer />
     </Layout>
   );
