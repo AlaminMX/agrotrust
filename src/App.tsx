@@ -27,6 +27,9 @@ import FarmerVerifications from "./pages/admin/FarmerVerifications";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
 import DisputeResolution from "./pages/admin/DisputeResolution";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminPayouts from "./pages/admin/AdminPayouts";
+import AdminUsers from "./pages/admin/AdminUsers";
 import NotFound from "./pages/NotFound";
 import PaymentCallback from "./pages/PaymentCallback";
 
@@ -65,6 +68,9 @@ const App = () => (
               <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
               <Route path="/admin/orders/:orderId" element={<AdminRoute><AdminOrderDetail /></AdminRoute>} />
               <Route path="/admin/disputes" element={<AdminRoute><DisputeResolution /></AdminRoute>} />
+              <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
+              <Route path="/admin/payouts" element={<AdminRoute><AdminPayouts /></AdminRoute>} />
+              <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

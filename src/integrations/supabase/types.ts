@@ -343,11 +343,13 @@ export type Database = {
           category: string
           created_at: string
           description: string | null
+          discount_percentage: number | null
           farmer_id: string
           id: string
           image_url: string | null
           is_active: boolean
           name: string
+          original_price: number | null
           price: number
           review_count: number | null
           state: string | null
@@ -360,11 +362,13 @@ export type Database = {
           category: string
           created_at?: string
           description?: string | null
+          discount_percentage?: number | null
           farmer_id: string
           id?: string
           image_url?: string | null
           is_active?: boolean
           name: string
+          original_price?: number | null
           price: number
           review_count?: number | null
           state?: string | null
@@ -377,11 +381,13 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string | null
+          discount_percentage?: number | null
           farmer_id?: string
           id?: string
           image_url?: string | null
           is_active?: boolean
           name?: string
+          original_price?: number | null
           price?: number
           review_count?: number | null
           state?: string | null
