@@ -176,6 +176,32 @@ serve(async (req) => {
       })
       .eq('id', order.farmer_id);
 
+    // Send email notification to farmer
+    try {
+      const notificationUrl = `${supabaseUrl}/functions/v1/send-payout-notification`;
+      const notificationResponse = await fetch(notificationUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          farmerId: order.farmer_id,
+          orderNumber: order.order_number,
+          amount: subtotal,
+          platformFee,
+          farmerPayout,
+        }),
+      });
+      
+      if (notificationResponse.ok) {
+        console.log('Payout notification email sent successfully');
+      } else {
+        console.error('Failed to send payout notification email');
+      }
+    } catch (emailError) {
+      console.error('Error sending payout notification:', emailError);
+    }
+
     console.log(`Escrow released successfully for order: ${orderId}`);
 
     return new Response(
