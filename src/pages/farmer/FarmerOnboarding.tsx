@@ -10,10 +10,40 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, CheckCircle2, ArrowRight, ArrowLeft, Leaf } from 'lucide-react';
+import { Loader2, Upload, CheckCircle2, ArrowRight, ArrowLeft, Leaf, Building2 } from 'lucide-react';
 import { STATES, CATEGORIES } from '@/types';
 
-type Step = 'details' | 'documents' | 'review';
+type Step = 'details' | 'bank' | 'documents' | 'review';
+
+const NIGERIAN_BANKS = [
+  { code: '044', name: 'Access Bank' },
+  { code: '023', name: 'Citibank Nigeria' },
+  { code: '063', name: 'Diamond Bank' },
+  { code: '050', name: 'Ecobank Nigeria' },
+  { code: '084', name: 'Enterprise Bank' },
+  { code: '070', name: 'Fidelity Bank' },
+  { code: '011', name: 'First Bank of Nigeria' },
+  { code: '214', name: 'First City Monument Bank' },
+  { code: '058', name: 'Guaranty Trust Bank' },
+  { code: '030', name: 'Heritage Bank' },
+  { code: '301', name: 'Jaiz Bank' },
+  { code: '082', name: 'Keystone Bank' },
+  { code: '526', name: 'Parallex Bank' },
+  { code: '076', name: 'Polaris Bank' },
+  { code: '101', name: 'Providus Bank' },
+  { code: '221', name: 'Stanbic IBTC Bank' },
+  { code: '068', name: 'Standard Chartered Bank' },
+  { code: '232', name: 'Sterling Bank' },
+  { code: '100', name: 'Suntrust Bank' },
+  { code: '032', name: 'Union Bank of Nigeria' },
+  { code: '033', name: 'United Bank for Africa' },
+  { code: '215', name: 'Unity Bank' },
+  { code: '035', name: 'Wema Bank' },
+  { code: '057', name: 'Zenith Bank' },
+  { code: '999991', name: 'Opay' },
+  { code: '999992', name: 'Palmpay' },
+  { code: '999993', name: 'Moniepoint' },
+];
 
 export default function FarmerOnboarding() {
   const { user, loading: authLoading } = useAuth();
@@ -22,6 +52,7 @@ export default function FarmerOnboarding() {
   const [step, setStep] = useState<Step>('details');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingProfile, setExistingProfile] = useState<any>(null);
+  const [isVerifyingBank, setIsVerifyingBank] = useState(false);
   
   // Form state
   const [farmName, setFarmName] = useState('');
@@ -30,6 +61,12 @@ export default function FarmerOnboarding() {
   const [address, setAddress] = useState('');
   const [farmSize, setFarmSize] = useState('');
   const [produceTypes, setProduceTypes] = useState<string[]>([]);
+  
+  // Bank details
+  const [bankCode, setBankCode] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState('');
+  const [bankVerified, setBankVerified] = useState(false);
   
   // Document state
   const [idDocument, setIdDocument] = useState<File | null>(null);
@@ -87,6 +124,52 @@ export default function FarmerOnboarding() {
     return publicUrl;
   };
 
+  const verifyBankAccount = async () => {
+    if (!bankCode || !accountNumber || accountNumber.length !== 10) {
+      toast({
+        title: 'Invalid Details',
+        description: 'Please enter a valid bank and 10-digit account number',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsVerifyingBank(true);
+    try {
+      // For now, we'll just ask the user to confirm the account name
+      // In production, you would verify with Paystack's resolve endpoint
+      toast({
+        title: 'Enter Account Name',
+        description: 'Please enter the exact name on your bank account',
+      });
+      setBankVerified(false);
+    } catch (error: any) {
+      toast({
+        title: 'Verification Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsVerifyingBank(false);
+    }
+  };
+
+  const confirmBankDetails = () => {
+    if (accountName.length < 3) {
+      toast({
+        title: 'Invalid Name',
+        description: 'Please enter the full name on your bank account',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setBankVerified(true);
+    toast({
+      title: 'Bank Details Saved',
+      description: 'Your bank details have been saved. Continue to upload documents.',
+    });
+  };
+
   const handleSubmit = async () => {
     if (!user) return;
     
@@ -109,7 +192,7 @@ export default function FarmerOnboarding() {
         .from('user_roles')
         .insert({ user_id: user.id, role: 'farmer' });
       
-      // Create farmer profile
+      // Create farmer profile with bank details
       const { error } = await supabase
         .from('farmer_profiles')
         .insert({
@@ -123,9 +206,29 @@ export default function FarmerOnboarding() {
           id_document_url: idDocUrl,
           farm_registration_url: farmRegUrl,
           verification_status: 'pending',
+          bank_name: NIGERIAN_BANKS.find(b => b.code === bankCode)?.name || null,
+          bank_account_number: accountNumber || null,
+          bank_account_name: accountName || null,
         });
       
       if (error) throw error;
+
+      // Create transfer recipient with Paystack if bank details provided
+      if (bankCode && accountNumber && accountName) {
+        try {
+          const { data, error: recipientError } = await supabase.functions.invoke('create-transfer-recipient', {
+            body: { bankCode, accountNumber, accountName },
+          });
+
+          if (recipientError) {
+            console.error('Failed to create transfer recipient:', recipientError);
+          } else {
+            console.log('Transfer recipient created successfully');
+          }
+        } catch (err) {
+          console.error('Error creating transfer recipient:', err);
+        }
+      }
       
       toast({
         title: 'Application Submitted!',
@@ -193,26 +296,33 @@ export default function FarmerOnboarding() {
 
         {/* Progress Steps */}
         <div className="flex justify-center mb-8">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <div className={`flex items-center gap-2 ${step === 'details' ? 'text-primary' : 'text-muted-foreground'}`}>
               <div className={`h-8 w-8 rounded-full flex items-center justify-center ${step === 'details' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                 1
               </div>
-              <span className="hidden sm:inline">Farm Details</span>
+              <span className="hidden sm:inline text-sm">Details</span>
             </div>
-            <div className="w-12 h-0.5 bg-muted" />
-            <div className={`flex items-center gap-2 ${step === 'documents' ? 'text-primary' : 'text-muted-foreground'}`}>
-              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${step === 'documents' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+            <div className="w-6 sm:w-12 h-0.5 bg-muted" />
+            <div className={`flex items-center gap-2 ${step === 'bank' ? 'text-primary' : 'text-muted-foreground'}`}>
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${step === 'bank' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                 2
               </div>
-              <span className="hidden sm:inline">Documents</span>
+              <span className="hidden sm:inline text-sm">Bank</span>
             </div>
-            <div className="w-12 h-0.5 bg-muted" />
+            <div className="w-6 sm:w-12 h-0.5 bg-muted" />
+            <div className={`flex items-center gap-2 ${step === 'documents' ? 'text-primary' : 'text-muted-foreground'}`}>
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${step === 'documents' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                3
+              </div>
+              <span className="hidden sm:inline text-sm">Documents</span>
+            </div>
+            <div className="w-6 sm:w-12 h-0.5 bg-muted" />
             <div className={`flex items-center gap-2 ${step === 'review' ? 'text-primary' : 'text-muted-foreground'}`}>
               <div className={`h-8 w-8 rounded-full flex items-center justify-center ${step === 'review' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                 <CheckCircle2 className="h-5 w-5" />
               </div>
-              <span className="hidden sm:inline">Review</span>
+              <span className="hidden sm:inline text-sm">Done</span>
             </div>
           </div>
         </div>
@@ -312,8 +422,108 @@ export default function FarmerOnboarding() {
                 
                 <div className="flex justify-end pt-4">
                   <Button 
-                    onClick={() => setStep('documents')}
+                    onClick={() => setStep('bank')}
                     disabled={!farmName || !state || !address || produceTypes.length === 0}
+                  >
+                    Continue <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </>
+          )}
+
+          {step === 'bank' && (
+            <>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Bank Details
+                </CardTitle>
+                <CardDescription>Add your bank account to receive payments (90% of sales)</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-muted/50 p-4 rounded-lg mb-4">
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Commission Structure:</strong> AgroTrust takes a 10% platform fee. 
+                    You receive 90% of each sale directly to your bank account after delivery confirmation.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bank">Bank *</Label>
+                  <Select value={bankCode} onValueChange={setBankCode}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your bank" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {NIGERIAN_BANKS.map((bank) => (
+                        <SelectItem key={bank.code} value={bank.code}>
+                          {bank.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="accountNumber">Account Number *</Label>
+                  <Input
+                    id="accountNumber"
+                    placeholder="10-digit account number"
+                    value={accountNumber}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setAccountNumber(val);
+                      setBankVerified(false);
+                    }}
+                    maxLength={10}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="accountName">Account Name *</Label>
+                  <Input
+                    id="accountName"
+                    placeholder="Name on your bank account"
+                    value={accountName}
+                    onChange={(e) => setAccountName(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter the exact name as it appears on your bank account
+                  </p>
+                </div>
+
+                {!bankVerified && bankCode && accountNumber.length === 10 && accountName.length >= 3 && (
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={confirmBankDetails}
+                    disabled={isVerifyingBank}
+                    className="w-full"
+                  >
+                    {isVerifyingBank ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                    )}
+                    Confirm Bank Details
+                  </Button>
+                )}
+
+                {bankVerified && (
+                  <div className="flex items-center gap-2 text-primary bg-primary/10 p-3 rounded-lg">
+                    <CheckCircle2 className="h-5 w-5" />
+                    <span>Bank details confirmed</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between pt-4">
+                  <Button variant="outline" onClick={() => setStep('bank')}>
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                  </Button>
+                  <Button 
+                    onClick={() => setStep('documents')}
+                    disabled={!bankVerified}
                   >
                     Continue <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -376,7 +586,7 @@ export default function FarmerOnboarding() {
                 </div>
                 
                 <div className="flex justify-between pt-4">
-                  <Button variant="outline" onClick={() => setStep('details')}>
+                  <Button variant="outline" onClick={() => setStep('bank')}>
                     <ArrowLeft className="mr-2 h-4 w-4" /> Back
                   </Button>
                   <Button 

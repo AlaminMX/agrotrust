@@ -13,6 +13,8 @@ import { formatPrice } from '@/lib/format';
 interface Payout {
   id: string;
   amount: number;
+  platform_fee: number | null;
+  farmer_payout: number | null;
   status: string;
   created_at: string;
   processed_at: string | null;
@@ -23,6 +25,7 @@ interface Payout {
     bank_name: string | null;
     bank_account_number: string | null;
     bank_account_name: string | null;
+    paystack_recipient_code: string | null;
   };
 }
 
@@ -47,7 +50,8 @@ export default function AdminPayouts() {
             farm_name,
             bank_name,
             bank_account_number,
-            bank_account_name
+            bank_account_name,
+            paystack_recipient_code
           )
         `)
         .order('created_at', { ascending: false });
@@ -133,9 +137,10 @@ export default function AdminPayouts() {
     }).format(new Date(dateString));
   };
 
-  const pendingPayouts = payouts.filter(p => p.status === 'pending');
+  const pendingPayouts = payouts.filter(p => p.status === 'pending' || p.status === 'processing');
   const completedPayouts = payouts.filter(p => p.status === 'completed');
-  const totalPending = pendingPayouts.reduce((sum, p) => sum + p.amount, 0);
+  const totalPending = pendingPayouts.reduce((sum, p) => sum + (p.farmer_payout || p.amount), 0);
+  const totalPlatformFees = payouts.filter(p => p.status === 'completed').reduce((sum, p) => sum + (p.platform_fee || 0), 0);
 
   const filteredPayouts = payouts.filter(payout =>
     payout.farmer_profiles?.farm_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -168,7 +173,7 @@ export default function AdminPayouts() {
 
       <main className="container mx-auto px-4 py-8">
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Pending Payouts</CardDescription>
@@ -180,11 +185,20 @@ export default function AdminPayouts() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>Completed This Month</CardDescription>
+              <CardDescription>Platform Fees Earned</CardDescription>
+              <CardTitle className="text-2xl text-primary">{formatPrice(totalPlatformFees)}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">10% commission</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Completed Payouts</CardDescription>
               <CardTitle className="text-2xl">{completedPayouts.length}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">Payouts processed</p>
+              <p className="text-sm text-muted-foreground">Transfers completed</p>
             </CardContent>
           </Card>
           <Card>
@@ -222,7 +236,9 @@ export default function AdminPayouts() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Farm</TableHead>
-                    <TableHead>Amount</TableHead>
+                    <TableHead>Order Total</TableHead>
+                    <TableHead>Platform Fee (10%)</TableHead>
+                    <TableHead>Farmer Payout (90%)</TableHead>
                     <TableHead>Bank Details</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Status</TableHead>
@@ -234,9 +250,18 @@ export default function AdminPayouts() {
                     <TableRow key={payout.id}>
                       <TableCell>
                         <p className="font-medium">{payout.farmer_profiles?.farm_name}</p>
+                        {payout.farmer_profiles?.paystack_recipient_code && (
+                          <span className="text-xs text-green-600">Auto-transfer enabled</span>
+                        )}
                       </TableCell>
                       <TableCell>
-                        <p className="font-bold text-primary">{formatPrice(payout.amount)}</p>
+                        <p className="text-muted-foreground">{formatPrice(payout.amount)}</p>
+                      </TableCell>
+                      <TableCell>
+                        <p className="text-primary font-medium">{formatPrice(payout.platform_fee || payout.amount * 0.1)}</p>
+                      </TableCell>
+                      <TableCell>
+                        <p className="font-bold text-green-600">{formatPrice(payout.farmer_payout || payout.amount * 0.9)}</p>
                       </TableCell>
                       <TableCell>
                         {payout.farmer_profiles?.bank_name ? (
