@@ -36,6 +36,7 @@ export default function EditProduct() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
+  const [originalPrice, setOriginalPrice] = useState('');
   const [unit, setUnit] = useState('kg');
   const [category, setCategory] = useState('');
   const [availableQuantity, setAvailableQuantity] = useState('');
@@ -70,6 +71,7 @@ export default function EditProduct() {
     setName(data.name);
     setDescription(data.description || '');
     setPrice(data.price.toString());
+    setOriginalPrice(data.original_price?.toString() || '');
     setUnit(data.unit);
     setCategory(data.category);
     setAvailableQuantity(data.available_quantity.toString());
@@ -107,12 +109,20 @@ export default function EditProduct() {
         imageUrl = await uploadImage(productImage);
       }
       
+      const salePrice = parseFloat(price);
+      const origPrice = originalPrice ? parseFloat(originalPrice) : null;
+      const discountPct = origPrice && origPrice > salePrice 
+        ? Math.round(((origPrice - salePrice) / origPrice) * 100) 
+        : 0;
+
       const { error } = await supabase
         .from('products')
         .update({
           name,
           description,
-          price: parseFloat(price),
+          price: salePrice,
+          original_price: origPrice,
+          discount_percentage: discountPct,
           unit,
           category,
           available_quantity: parseInt(availableQuantity),
@@ -293,7 +303,7 @@ export default function EditProduct() {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="price">Price (₦) *</Label>
+                  <Label htmlFor="price">Sale Price (₦) *</Label>
                   <Input
                     id="price"
                     type="number"
@@ -307,17 +317,31 @@ export default function EditProduct() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="quantity">Available Quantity *</Label>
+                  <Label htmlFor="originalPrice">Original Price (₦)</Label>
                   <Input
-                    id="quantity"
+                    id="originalPrice"
                     type="number"
                     min="0"
-                    placeholder="e.g., 100"
-                    value={availableQuantity}
-                    onChange={(e) => setAvailableQuantity(e.target.value)}
-                    required
+                    step="0.01"
+                    placeholder="Leave blank if no discount"
+                    value={originalPrice}
+                    onChange={(e) => setOriginalPrice(e.target.value)}
                   />
+                  <p className="text-xs text-muted-foreground">Set higher than sale price for discount</p>
                 </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="quantity">Available Quantity *</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="0"
+                  placeholder="e.g., 100"
+                  value={availableQuantity}
+                  onChange={(e) => setAvailableQuantity(e.target.value)}
+                  required
+                />
               </div>
               
               <div className="space-y-3">

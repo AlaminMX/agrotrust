@@ -1,1 +1,4 @@
 project_id = "zvvmahabgsjurfeygirg"
+
+[functions.release-escrow]
+verify_jwt = true

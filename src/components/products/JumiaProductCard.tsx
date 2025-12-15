@@ -1,29 +1,66 @@
 import { Link } from 'react-router-dom';
 import { Star, ShoppingCart, Heart } from 'lucide-react';
-import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
-interface JumiaProductCardProps {
-  product: Product;
-  showDiscount?: boolean;
+interface ProductData {
+  id: string;
+  name: string;
+  price: number;
+  original_price?: number | null;
+  discount_percentage?: number | null;
+  unit: string;
+  image_url?: string | null;
+  image?: string;
+  available_quantity?: number;
+  available?: number;
+  average_rating?: number;
+  rating?: number;
+  review_count?: number;
+  reviewCount?: number;
+  farm_name?: string;
+  farmName?: string;
+  is_verified?: boolean;
+  isVerified?: boolean;
 }
 
-export const JumiaProductCard = ({ product, showDiscount = false }: JumiaProductCardProps) => {
+interface JumiaProductCardProps {
+  product: ProductData;
+}
+
+export const JumiaProductCard = ({ product }: JumiaProductCardProps) => {
   const { addToCart } = useCart();
   const [isWishlisted, setIsWishlisted] = useState(false);
 
-  // Generate random discount for demo
-  const discountPercent = showDiscount ? Math.floor(Math.random() * 20) + 5 : 0;
-  const originalPrice = showDiscount ? Math.round(product.price * (100 / (100 - discountPercent))) : product.price;
+  // Handle both DB format and legacy format
+  const discountPercent = product.discount_percentage || 0;
+  const originalPrice = product.original_price || null;
+  const imageUrl = product.image_url || product.image || '/placeholder.svg';
+  const available = product.available_quantity ?? product.available ?? 0;
+  const rating = product.average_rating ?? product.rating ?? 0;
+  const reviewCount = product.review_count ?? product.reviewCount ?? 0;
+  const farmName = product.farm_name || product.farmName || 'Local Farm';
+  const isVerified = product.is_verified ?? product.isVerified ?? false;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product);
+    // Convert to cart-compatible format
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      unit: product.unit,
+      image: imageUrl,
+      available: available,
+      farmName: farmName,
+      isVerified: isVerified,
+      rating: rating,
+      reviewCount: reviewCount,
+    } as any);
   };
 
   const handleWishlist = (e: React.MouseEvent) => {
@@ -40,29 +77,29 @@ export const JumiaProductCard = ({ product, showDiscount = false }: JumiaProduct
       {/* Image Container */}
       <div className="relative aspect-square overflow-hidden bg-muted">
         <img
-          src={product.image}
+          src={imageUrl}
           alt={product.name}
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         
         {/* Discount Badge */}
         {discountPercent > 0 && (
-          <span className="absolute top-2 left-2 bg-orange text-white text-xs font-bold px-2 py-1 rounded">
+          <span className="absolute top-2 left-2 bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded">
             -{discountPercent}%
           </span>
         )}
 
         {/* Verified Badge */}
-        {product.isVerified && (
+        {isVerified && (
           <span className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded flex items-center gap-1">
             ✓ Verified
           </span>
         )}
 
         {/* Low Stock Warning */}
-        {product.available <= 5 && (
+        {available > 0 && available <= 5 && (
           <span className="absolute bottom-2 left-2 bg-destructive text-destructive-foreground text-xs px-2 py-1 rounded">
-            Only {product.available} left!
+            Only {available} left!
           </span>
         )}
 
@@ -71,17 +108,17 @@ export const JumiaProductCard = ({ product, showDiscount = false }: JumiaProduct
           <Button
             size="icon"
             variant="secondary"
-            className="h-9 w-9 rounded-full shadow-lg bg-card hover:bg-orange hover:text-white"
+            className="h-9 w-9 rounded-full shadow-lg bg-card hover:bg-primary hover:text-primary-foreground"
             onClick={handleWishlist}
           >
-            <Heart className={cn("h-4 w-4", isWishlisted && "fill-orange text-orange")} />
+            <Heart className={cn("h-4 w-4", isWishlisted && "fill-primary text-primary")} />
           </Button>
           <Button
             size="icon"
-            className="h-9 w-9 rounded-full shadow-lg bg-orange hover:bg-orange-dark"
+            className="h-9 w-9 rounded-full shadow-lg bg-primary hover:bg-primary/90"
             onClick={handleAddToCart}
           >
-            <ShoppingCart className="h-4 w-4 text-white" />
+            <ShoppingCart className="h-4 w-4 text-primary-foreground" />
           </Button>
         </div>
       </div>
@@ -89,7 +126,7 @@ export const JumiaProductCard = ({ product, showDiscount = false }: JumiaProduct
       {/* Content */}
       <div className="p-3 space-y-2">
         {/* Product Name */}
-        <h3 className="font-medium text-foreground text-sm line-clamp-2 min-h-[40px] group-hover:text-orange transition-colors">
+        <h3 className="font-medium text-foreground text-sm line-clamp-2 min-h-[40px] group-hover:text-primary transition-colors">
           {product.name}
         </h3>
 
@@ -99,7 +136,7 @@ export const JumiaProductCard = ({ product, showDiscount = false }: JumiaProduct
             <span className="text-lg font-bold text-foreground">{formatPrice(product.price)}</span>
             <span className="text-xs text-muted-foreground">/{product.unit}</span>
           </div>
-          {discountPercent > 0 && (
+          {originalPrice && originalPrice > product.price && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground line-through">
                 {formatPrice(originalPrice)}
@@ -111,13 +148,13 @@ export const JumiaProductCard = ({ product, showDiscount = false }: JumiaProduct
         {/* Rating & Reviews */}
         <div className="flex items-center gap-1">
           <Star className="h-3.5 w-3.5 fill-gold text-gold" />
-          <span className="text-sm font-medium text-foreground">{product.rating.toFixed(1)}</span>
-          <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
+          <span className="text-sm font-medium text-foreground">{rating.toFixed(1)}</span>
+          <span className="text-xs text-muted-foreground">({reviewCount})</span>
         </div>
 
         {/* Farm Name */}
         <p className="text-xs text-muted-foreground truncate">
-          by {product.farmName}
+          by {farmName}
         </p>
       </div>
     </Link>
