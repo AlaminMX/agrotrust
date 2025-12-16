@@ -5,6 +5,7 @@ import { FlashDeals } from '@/components/home/FlashDeals';
 import { FeaturedProductsSection } from '@/components/home/FeaturedProductsSection';
 import { TrustBanner } from '@/components/home/TrustBanner';
 import { EscrowExplainer } from '@/components/home/EscrowExplainer';
+import { BecomeFarmerCTA } from '@/components/home/BecomeFarmerCTA';
 
 const Index = () => {
   return (
@@ -15,6 +16,7 @@ const Index = () => {
       <FlashDeals />
       <FeaturedProductsSection />
       <EscrowExplainer />
+      <BecomeFarmerCTA />
     </Layout>
   );
 };
