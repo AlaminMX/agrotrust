@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom';
-import { Leaf, Mail, Phone, MapPin } from 'lucide-react';
+import { Leaf, Mail, Phone, MapPin, BadgeCheck, LayoutDashboard } from 'lucide-react';
 
 export const Footer = () => {
   return (
     <footer className="border-t border-border bg-card">
       <div className="container py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand */}
-          <div className="space-y-4">
+          <div className="space-y-4 lg:col-span-1">
             <Link to="/" className="flex items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                 <Leaf className="h-5 w-5 text-primary-foreground" />
@@ -32,6 +32,27 @@ export const Footer = () => {
               <Link to="/track-order" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 Track Order
               </Link>
+              <Link to="/profile" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                My Account
+              </Link>
+            </nav>
+          </div>
+
+          {/* For Farmers */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-foreground">For Farmers</h4>
+            <nav className="flex flex-col gap-2">
+              <Link to="/farmer/onboarding" className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
+                <BadgeCheck className="h-3.5 w-3.5 text-primary" />
+                Become a Verified Farmer
+              </Link>
+              <Link to="/farmer/dashboard" className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                Farmer Dashboard
+              </Link>
+              <span className="text-xs text-muted-foreground/70 pt-1">
+                90% payout • Auto payments • Platform logistics
+              </span>
             </nav>
           </div>
 

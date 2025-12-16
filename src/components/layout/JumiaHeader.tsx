@@ -152,6 +152,17 @@ export const JumiaHeader = () => {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
+            {/* Profile Link - Visible */}
+            {user && (
+              <Link 
+                to="/profile" 
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-foreground hover:text-primary transition-colors"
+              >
+                <User className="h-4 w-4" />
+                My Profile
+              </Link>
+            )}
+
             {/* Account */}
             {user ? (
               <DropdownMenu>
@@ -186,9 +197,15 @@ export const JumiaHeader = () => {
                     </DropdownMenuItem>
                   )}
                   {!isFarmer && !isAdmin && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/farmer/onboarding">Become a Farmer</Link>
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link to="/farmer/onboarding" className="flex items-center gap-2 text-primary font-medium">
+                          <Store className="h-4 w-4" />
+                          Become a Verified Farmer
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut} className="text-destructive">
@@ -301,7 +318,36 @@ export const JumiaHeader = () => {
       {/* Mobile Navigation */}
       {isMenuOpen && (
         <div className="lg:hidden border-t border-border bg-card">
-          <nav className="container py-4 space-y-2">
+          <nav className="container py-4 space-y-4">
+            {/* User links for mobile */}
+            {user && (
+              <div className="flex gap-2">
+                <Link 
+                  to="/profile" 
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex-1"
+                >
+                  <Button variant="outline" className="w-full">
+                    <User className="h-4 w-4 mr-2" />
+                    My Profile
+                  </Button>
+                </Link>
+                {!isFarmer && !isAdmin && (
+                  <Link 
+                    to="/farmer/onboarding" 
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex-1"
+                  >
+                    <Button className="w-full bg-primary">
+                      <Store className="h-4 w-4 mr-2" />
+                      Become a Farmer
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            )}
+
+            {/* Categories */}
             <div className="grid grid-cols-2 gap-2">
               {categories.map(category => (
                 <Link
@@ -315,14 +361,24 @@ export const JumiaHeader = () => {
                 </Link>
               ))}
             </div>
+
+            {/* Bottom actions */}
             <div className="pt-4 border-t border-border space-y-2">
               {!user && (
-                <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                  <Button className="w-full">Sign In / Register</Button>
-                </Link>
+                <>
+                  <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                    <Button className="w-full">Sign In / Register</Button>
+                  </Link>
+                  <Link to="/farmer/onboarding" onClick={() => setIsMenuOpen(false)}>
+                    <Button variant="outline" className="w-full border-primary text-primary">
+                      <Store className="h-4 w-4 mr-2" />
+                      Sell on AgroTrust
+                    </Button>
+                  </Link>
+                </>
               )}
               <Link to="/how-it-works" onClick={() => setIsMenuOpen(false)}>
-                <Button variant="outline" className="w-full">How It Works</Button>
+                <Button variant="ghost" className="w-full">How It Works</Button>
               </Link>
             </div>
           </nav>
