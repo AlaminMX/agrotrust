@@ -1,6 +1,14 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { CartItem, Product, State } from '@/types';
 import { DELIVERY_FEES } from '@/data/mockData';
+
+interface FarmerGroup {
+  farmerId: string;
+  farmerName: string;
+  farmName: string;
+  items: CartItem[];
+  subtotal: number;
+}
 
 interface CartContextType {
   items: CartItem[];
@@ -14,6 +22,11 @@ interface CartContextType {
   subtotal: number;
   deliveryFee: number;
   total: number;
+  // Multi-farmer support
+  itemsByFarmer: FarmerGroup[];
+  farmerCount: number;
+  getDeliveryFeePerFarmer: () => number;
+  getTotalDeliveryFee: () => number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -56,9 +69,41 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setItems([]);
   }, []);
 
+  // Group items by farmer
+  const itemsByFarmer = useMemo(() => {
+    const groups: { [key: string]: FarmerGroup } = {};
+    
+    items.forEach(item => {
+      const farmerId = item.product.farmerId;
+      if (!groups[farmerId]) {
+        groups[farmerId] = {
+          farmerId,
+          farmerName: item.product.farmerName,
+          farmName: item.product.farmName,
+          items: [],
+          subtotal: 0,
+        };
+      }
+      groups[farmerId].items.push(item);
+      groups[farmerId].subtotal += item.product.price * item.quantity;
+    });
+    
+    return Object.values(groups);
+  }, [items]);
+
+  const farmerCount = itemsByFarmer.length;
+
+  const getDeliveryFeePerFarmer = useCallback(() => {
+    return items.length > 0 ? DELIVERY_FEES[selectedState] : 0;
+  }, [items.length, selectedState]);
+
+  const getTotalDeliveryFee = useCallback(() => {
+    return farmerCount > 0 ? DELIVERY_FEES[selectedState] * farmerCount : 0;
+  }, [farmerCount, selectedState]);
+
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-  const deliveryFee = items.length > 0 ? DELIVERY_FEES[selectedState] : 0;
+  const deliveryFee = getTotalDeliveryFee();
   const total = subtotal + deliveryFee;
 
   return (
@@ -75,6 +120,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         subtotal,
         deliveryFee,
         total,
+        itemsByFarmer,
+        farmerCount,
+        getDeliveryFeePerFarmer,
+        getTotalDeliveryFee,
       }}
     >
       {children}

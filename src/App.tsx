@@ -23,6 +23,7 @@ import AddProduct from "./pages/farmer/AddProduct";
 import EditProduct from "./pages/farmer/EditProduct";
 import FarmerOrderDetail from "./pages/farmer/FarmerOrderDetail";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import FarmerVerifications from "./pages/admin/FarmerVerifications";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/farmer/orders/:orderId" element={<FarmerOrderDetail />} />
               {/* Admin Routes - Protected */}
               <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+              <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
               <Route path="/admin/verifications" element={<AdminRoute><FarmerVerifications /></AdminRoute>} />
               <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
               <Route path="/admin/orders/:orderId" element={<AdminRoute><AdminOrderDetail /></AdminRoute>} />
