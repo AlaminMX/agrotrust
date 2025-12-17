@@ -274,7 +274,7 @@ export default function FarmerOnboarding() {
             <p className="text-sm text-muted-foreground mb-4">
               We'll notify you via email once your application is approved.
             </p>
-            <Button variant="outline" onClick={() => navigate('/')}>
+            <Button variant="outline" onClick={() => navigate('/home')}>
               Return Home
             </Button>
           </CardContent>
@@ -623,7 +623,7 @@ export default function FarmerOnboarding() {
                   Our team will review your documents and verify your farm. This usually takes 1-2 business days.
                   You'll receive an email notification once approved.
                 </p>
-                <Button onClick={() => navigate('/')}>
+                <Button onClick={() => navigate('/home')}>
                   Return Home
                 </Button>
               </CardContent>

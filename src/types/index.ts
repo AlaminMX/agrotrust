@@ -74,7 +74,8 @@ export type ProductCategory =
   | 'tubers'
   | 'poultry'
   | 'dairy'
-  | 'herbs';
+  | 'herbs'
+  | 'meat';
 
 export const STATES: { value: State; label: string }[] = [
   { value: 'abuja', label: 'Abuja' },
@@ -91,4 +92,5 @@ export const CATEGORIES: { value: ProductCategory; label: string; icon: string }
   { value: 'poultry', label: 'Poultry', icon: '🐔' },
   { value: 'dairy', label: 'Dairy', icon: '🥛' },
   { value: 'herbs', label: 'Herbs', icon: '🌿' },
+  { value: 'meat', label: 'Meat', icon: '🥩' },
 ];

@@ -11,8 +11,8 @@ const banners = [
     subtitle: 'Skip the middlemen. Get farm-fresh products at fair prices.',
     cta: 'Shop Now',
     link: '/products',
-    gradient: 'from-primary to-primary/80',
-    emoji: '🥬',
+    gradient: 'from-primary/90 to-primary/70',
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1920&h=800&fit=crop&q=80',
   },
   {
     id: 2,
@@ -20,8 +20,8 @@ const banners = [
     subtitle: 'Every farmer on AgroTrust is verified for quality and reliability.',
     cta: 'Meet Our Farmers',
     link: '/products',
-    gradient: 'from-earth to-earth/80',
-    emoji: '👨‍🌾',
+    gradient: 'from-earth/90 to-earth/70',
+    image: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=1920&h=800&fit=crop&q=80',
   },
   {
     id: 3,
@@ -29,8 +29,8 @@ const banners = [
     subtitle: 'Escrow payment ensures you only pay when satisfied with delivery.',
     cta: 'Learn More',
     link: '/how-it-works',
-    gradient: 'from-forest to-forest-light',
-    emoji: '🛡️',
+    gradient: 'from-forest/90 to-forest-light/70',
+    image: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?w=1920&h=800&fit=crop&q=80',
   },
   {
     id: 4,
@@ -38,8 +38,8 @@ const banners = [
     subtitle: 'Fresh produce delivered straight to your doorstep.',
     cta: 'Start Shopping',
     link: '/products',
-    gradient: 'from-orange to-orange-dark',
-    emoji: '🚚',
+    gradient: 'from-orange/90 to-orange-dark/70',
+    image: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=1920&h=800&fit=crop&q=80',
   },
 ];
 
@@ -67,7 +67,7 @@ export const BannerCarousel = () => {
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      <div className="relative h-[300px] md:h-[400px]">
+      <div className="relative h-[300px] md:h-[450px] lg:h-[500px]">
         {banners.map((banner, index) => (
           <div
             key={banner.id}
@@ -76,25 +76,34 @@ export const BannerCarousel = () => {
               index === currentSlide ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full"
             )}
           >
+            {/* Background Image */}
+            <div 
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${banner.image})` }}
+            />
+            {/* Gradient Overlay */}
             <div className={cn(
-              "h-full bg-gradient-to-r text-white",
+              "absolute inset-0 bg-gradient-to-r",
               banner.gradient
-            )}>
-              <div className="container h-full flex items-center">
-                <div className="max-w-xl space-y-4">
-                  <span className="text-5xl">{banner.emoji}</span>
-                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
-                    {banner.title}
-                  </h2>
-                  <p className="text-lg md:text-xl opacity-90">
-                    {banner.subtitle}
-                  </p>
-                  <Link to={banner.link}>
-                    <Button size="lg" className="bg-white text-foreground hover:bg-white/90 font-semibold">
-                      {banner.cta}
-                    </Button>
-                  </Link>
-                </div>
+            )} />
+            
+            {/* Content */}
+            <div className="relative h-full container flex items-center">
+              <div className="max-w-xl space-y-4 md:space-y-6">
+                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight text-white drop-shadow-lg">
+                  {banner.title}
+                </h2>
+                <p className="text-lg md:text-xl text-white/90 drop-shadow-md">
+                  {banner.subtitle}
+                </p>
+                <Link to={banner.link}>
+                  <Button 
+                    size="lg" 
+                    className="bg-white text-foreground hover:bg-white/90 font-semibold shadow-lg hover:shadow-xl transition-all"
+                  >
+                    {banner.cta}
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
@@ -106,7 +115,7 @@ export const BannerCarousel = () => {
         variant="ghost"
         size="icon"
         onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/20 text-white hover:bg-white/30 backdrop-blur"
+        className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40 backdrop-blur-sm border border-white/20 transition-all"
       >
         <ChevronLeft className="h-6 w-6" />
       </Button>
@@ -114,20 +123,20 @@ export const BannerCarousel = () => {
         variant="ghost"
         size="icon"
         onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/20 text-white hover:bg-white/30 backdrop-blur"
+        className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40 backdrop-blur-sm border border-white/20 transition-all"
       >
         <ChevronRight className="h-6 w-6" />
       </Button>
 
       {/* Dots */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
         {banners.map((_, index) => (
           <button
             key={index}
             onClick={() => setCurrentSlide(index)}
             className={cn(
-              "h-2 rounded-full transition-all",
-              index === currentSlide ? "w-8 bg-white" : "w-2 bg-white/50"
+              "h-3 rounded-full transition-all shadow-md",
+              index === currentSlide ? "w-10 bg-white" : "w-3 bg-white/50 hover:bg-white/70"
             )}
           />
         ))}
