@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { formatPrice } from '@/lib/format';
 import { STATES } from '@/types';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Shield } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Shield, Store } from 'lucide-react';
 
 const Cart = () => {
   const {
@@ -14,9 +14,15 @@ const Cart = () => {
     updateQuantity,
     removeFromCart,
     subtotal,
-    deliveryFee,
     total,
+    itemsByFarmer,
+    farmerCount,
+    getDeliveryFeePerFarmer,
+    getTotalDeliveryFee,
   } = useCart();
+
+  const deliveryFeePerFarmer = getDeliveryFeePerFarmer();
+  const totalDeliveryFee = getTotalDeliveryFee();
 
   if (items.length === 0) {
     return (
@@ -40,64 +46,88 @@ const Cart = () => {
       <div className="bg-muted/30 py-8">
         <div className="container">
           <h1 className="text-3xl font-bold text-foreground">Shopping Cart</h1>
+          {farmerCount > 1 && (
+            <p className="text-muted-foreground mt-1">
+              Items from {farmerCount} different farms • Separate orders will be created
+            </p>
+          )}
         </div>
       </div>
 
       <div className="container py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Cart Items */}
-          <div className="lg:col-span-2 space-y-4">
-            {items.map(({ product, quantity }) => (
-              <div
-                key={product.id}
-                className="flex gap-4 p-4 bg-card rounded-xl border border-border"
-              >
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-24 h-24 rounded-lg object-cover"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 className="font-semibold text-foreground">{product.name}</h3>
-                      <p className="text-sm text-earth">{product.farmName}</p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={() => removeFromCart(product.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+          {/* Cart Items Grouped by Farmer */}
+          <div className="lg:col-span-2 space-y-6">
+            {itemsByFarmer.map((group) => (
+              <div key={group.farmerId} className="bg-card rounded-xl border border-border overflow-hidden">
+                {/* Farmer Header */}
+                <div className="bg-muted/50 px-4 py-3 border-b border-border flex items-center gap-2">
+                  <Store className="h-4 w-4 text-primary" />
+                  <span className="font-semibold text-foreground">{group.farmName}</span>
+                  <span className="text-sm text-muted-foreground">by {group.farmerName}</span>
+                </div>
 
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => updateQuantity(product.id, quantity - 1)}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-8 text-center font-medium text-foreground">{quantity}</span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => updateQuantity(product.id, quantity + 1)}
-                        disabled={quantity >= product.available}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
+                {/* Items */}
+                <div className="divide-y divide-border">
+                  {group.items.map(({ product, quantity }) => (
+                    <div
+                      key={product.id}
+                      className="flex gap-4 p-4"
+                    >
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-20 h-20 rounded-lg object-cover"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="font-semibold text-foreground">{product.name}</h3>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive h-8 w-8"
+                            onClick={() => removeFromCart(product.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-3">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateQuantity(product.id, quantity - 1)}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-8 text-center font-medium text-foreground">{quantity}</span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateQuantity(product.id, quantity + 1)}
+                              disabled={quantity >= product.available}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <span className="font-semibold text-foreground">
+                            {formatPrice(product.price * quantity)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <span className="font-semibold text-foreground">
-                      {formatPrice(product.price * quantity)}
-                    </span>
-                  </div>
+                  ))}
+                </div>
+
+                {/* Farmer Subtotal */}
+                <div className="bg-muted/30 px-4 py-3 border-t border-border flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">
+                    Subtotal ({group.items.length} item{group.items.length > 1 ? 's' : ''})
+                  </span>
+                  <span className="font-semibold">{formatPrice(group.subtotal)}</span>
                 </div>
               </div>
             ))}
@@ -126,6 +156,19 @@ const Cart = () => {
                 </select>
               </div>
 
+              {/* Farmer Breakdown */}
+              {farmerCount > 1 && (
+                <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+                  <p className="text-sm font-medium mb-2">Orders breakdown:</p>
+                  {itemsByFarmer.map((group) => (
+                    <div key={group.farmerId} className="flex justify-between text-sm py-1">
+                      <span className="text-muted-foreground truncate mr-2">{group.farmName}</span>
+                      <span>{formatPrice(group.subtotal + deliveryFeePerFarmer)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Totals */}
               <div className="space-y-3 py-4 border-t border-border">
                 <div className="flex justify-between text-sm">
@@ -133,9 +176,16 @@ const Cart = () => {
                   <span className="text-foreground">{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Delivery Fee</span>
-                  <span className="text-foreground">{formatPrice(deliveryFee)}</span>
+                  <span className="text-muted-foreground">
+                    Delivery Fee {farmerCount > 1 && `(${farmerCount} orders)`}
+                  </span>
+                  <span className="text-foreground">{formatPrice(totalDeliveryFee)}</span>
                 </div>
+                {farmerCount > 1 && (
+                  <p className="text-xs text-muted-foreground">
+                    {formatPrice(deliveryFeePerFarmer)} per farm order
+                  </p>
+                )}
                 <div className="flex justify-between font-semibold pt-3 border-t border-border">
                   <span className="text-foreground">Total</span>
                   <span className="text-foreground">{formatPrice(total)}</span>
@@ -150,11 +200,22 @@ const Cart = () => {
                 </Button>
               </Link>
 
+              {/* Multi-order notice */}
+              {farmerCount > 1 && (
+                <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg flex items-start gap-2 border border-amber-200 dark:border-amber-800">
+                  <Store className="h-4 w-4 text-amber-600 mt-0.5" />
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    Your cart contains items from {farmerCount} different farms. 
+                    {farmerCount} separate orders will be created and tracked individually.
+                  </p>
+                </div>
+              )}
+
               {/* Escrow Notice */}
               <div className="mt-4 p-3 bg-primary/5 rounded-lg flex items-start gap-2">
                 <Shield className="h-4 w-4 text-primary mt-0.5" />
                 <p className="text-xs text-muted-foreground">
-                  Your payment is protected by escrow. Funds are only released to the farmer after you confirm delivery.
+                  Your payment is protected by escrow. Funds are only released to farmers after you confirm delivery.
                 </p>
               </div>
             </div>
