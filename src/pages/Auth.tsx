@@ -64,7 +64,7 @@ export default function Auth() {
           .maybeSingle();
 
         if (profile?.onboarding_completed) {
-          navigate('/');
+          navigate('/home');
         } else {
           navigate('/onboarding');
         }
@@ -107,7 +107,7 @@ export default function Auth() {
         title: 'Welcome back!',
         description: 'You have successfully logged in.',
       });
-      navigate('/');
+      navigate('/home');
     }
   };
 
