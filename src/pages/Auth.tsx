@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Leaf } from 'lucide-react';
+import { Loader2, Leaf, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Please enter a valid email address');
@@ -22,56 +22,9 @@ export default function Auth() {
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  // Check if user has completed onboarding or is admin
-  useEffect(() => {
-    const checkUserAndRedirect = async () => {
-      if (user) {
-        // Check if user is admin
-        const { data: adminRole } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .maybeSingle();
-
-        if (adminRole) {
-          navigate('/admin');
-          return;
-        }
-
-        // Check if user is farmer
-        const { data: farmerRole } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'farmer')
-          .maybeSingle();
-
-        if (farmerRole) {
-          navigate('/farmer/dashboard');
-          return;
-        }
-
-        // Check onboarding status for consumers
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('onboarding_completed')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (profile?.onboarding_completed) {
-          navigate('/home');
-        } else {
-          navigate('/onboarding');
-        }
-      }
-    };
-    checkUserAndRedirect();
-  }, [user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,6 +124,10 @@ export default function Auth() {
           <CardHeader className="text-center">
             <CardTitle>Welcome</CardTitle>
             <CardDescription>Sign in to your account or create a new one</CardDescription>
+            <Link to="/" className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-2">
+              <ArrowLeft className="h-3 w-3" />
+              Continue browsing without signing in
+            </Link>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login" className="w-full">

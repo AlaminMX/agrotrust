@@ -221,6 +221,12 @@ const Checkout = () => {
     }
   };
 
+  // Auth guard - redirect to login if not authenticated
+  if (!user) {
+    navigate('/auth');
+    return null;
+  }
+
   if (items.length === 0) {
     navigate('/cart');
     return null;
