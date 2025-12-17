@@ -117,11 +117,9 @@ export default function FarmerOnboarding() {
     
     if (error) throw error;
     
-    const { data: { publicUrl } } = supabase.storage
-      .from('farmer-documents')
-      .getPublicUrl(fileName);
-    
-    return publicUrl;
+    // Return file path instead of public URL for private bucket
+    // Signed URLs will be generated on-demand when viewing documents
+    return fileName;
   };
 
   const verifyBankAccount = async () => {

@@ -35,13 +35,16 @@ serve(async (req) => {
     const body = await req.text();
     const signature = req.headers.get('x-paystack-signature');
 
-    // Verify webhook signature
-    if (signature) {
-      const isValid = await verifySignature(body, signature, paystackSecretKey);
-      if (!isValid) {
-        console.error('Invalid webhook signature');
-        return new Response('Invalid signature', { status: 401 });
-      }
+    // Verify webhook signature - MANDATORY
+    if (!signature) {
+      console.error('Missing webhook signature');
+      return new Response('Signature required', { status: 401 });
+    }
+
+    const isValid = await verifySignature(body, signature, paystackSecretKey);
+    if (!isValid) {
+      console.error('Invalid webhook signature');
+      return new Response('Invalid signature', { status: 401 });
     }
 
     const event = JSON.parse(body);
