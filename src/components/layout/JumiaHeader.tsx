@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, HelpCircle, ChevronDown, Search, Menu, X, Leaf, Store } from 'lucide-react';
+import { ShoppingCart, User, HelpCircle, ChevronDown, Search, Menu, X, Leaf, Store, LogOut, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -152,8 +152,19 @@ export const JumiaHeader = () => {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
-            {/* Profile Link - Visible */}
-            {user && (
+            {/* Farmer Upload Product - Visible for farmers */}
+            {isFarmer && (
+              <Link 
+                to="/farmer/products/add" 
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Upload Product
+              </Link>
+            )}
+
+            {/* Profile Link - Visible for non-admins only */}
+            {user && !isAdmin && (
               <Link 
                 to="/profile" 
                 className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-foreground hover:text-primary transition-colors"
@@ -177,24 +188,36 @@ export const JumiaHeader = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 bg-card">
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      My Account
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile">Orders</Link>
-                  </DropdownMenuItem>
+                  {!isAdmin && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to="/profile" className="flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          My Account
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/profile">Orders</Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   {isAdmin && (
                     <DropdownMenuItem asChild>
                       <Link to="/admin">Admin Dashboard</Link>
                     </DropdownMenuItem>
                   )}
                   {isFarmer && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/farmer/dashboard">Farmer Dashboard</Link>
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to="/farmer/dashboard">Farmer Dashboard</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/farmer/products/add" className="flex items-center gap-2">
+                          <Plus className="h-4 w-4" />
+                          Upload Product
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
                   )}
                   {!isFarmer && !isAdmin && (
                     <>
@@ -209,6 +232,7 @@ export const JumiaHeader = () => {
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut} className="text-destructive">
+                    <LogOut className="h-4 w-4 mr-2" />
                     Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -222,6 +246,19 @@ export const JumiaHeader = () => {
                     <p className="text-sm font-medium text-foreground">Account</p>
                   </div>
                 </Link>
+              </Button>
+            )}
+
+            {/* Visible Sign Out Button */}
+            {user && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={signOut}
+                className="hidden lg:flex items-center gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
               </Button>
             )}
 
@@ -321,29 +358,68 @@ export const JumiaHeader = () => {
           <nav className="container py-4 space-y-4">
             {/* User links for mobile */}
             {user && (
-              <div className="flex gap-2">
-                <Link 
-                  to="/profile" 
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex-1"
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  {!isAdmin && (
+                    <Link 
+                      to="/profile" 
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex-1"
+                    >
+                      <Button variant="outline" className="w-full">
+                        <User className="h-4 w-4 mr-2" />
+                        My Profile
+                      </Button>
+                    </Link>
+                  )}
+                  {isAdmin && (
+                    <Link 
+                      to="/admin" 
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex-1"
+                    >
+                      <Button variant="outline" className="w-full">
+                        Admin Dashboard
+                      </Button>
+                    </Link>
+                  )}
+                  {isFarmer && (
+                    <Link 
+                      to="/farmer/products/add" 
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex-1"
+                    >
+                      <Button className="w-full bg-primary">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Upload Product
+                      </Button>
+                    </Link>
+                  )}
+                  {!isFarmer && !isAdmin && (
+                    <Link 
+                      to="/farmer/onboarding" 
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex-1"
+                    >
+                      <Button className="w-full bg-primary">
+                        <Store className="h-4 w-4 mr-2" />
+                        Become a Farmer
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+                {/* Sign Out Button */}
+                <Button 
+                  variant="outline" 
+                  className="w-full text-destructive border-destructive/30 hover:bg-destructive/10"
+                  onClick={() => {
+                    signOut();
+                    setIsMenuOpen(false);
+                  }}
                 >
-                  <Button variant="outline" className="w-full">
-                    <User className="h-4 w-4 mr-2" />
-                    My Profile
-                  </Button>
-                </Link>
-                {!isFarmer && !isAdmin && (
-                  <Link 
-                    to="/farmer/onboarding" 
-                    onClick={() => setIsMenuOpen(false)}
-                    className="flex-1"
-                  >
-                    <Button className="w-full bg-primary">
-                      <Store className="h-4 w-4 mr-2" />
-                      Become a Farmer
-                    </Button>
-                  </Link>
-                )}
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
               </div>
             )}
 
