@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,7 +29,8 @@ import {
   Eye, 
   FileText,
   MapPin,
-  Calendar
+  Calendar,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -47,6 +48,8 @@ export default function FarmerVerifications() {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('pending');
+  const [documentUrls, setDocumentUrls] = useState<Record<string, string>>({});
+  const [loadingDocs, setLoadingDocs] = useState(false);
 
   useEffect(() => {
     const checkAdminAndFetch = async () => {
@@ -90,10 +93,56 @@ export default function FarmerVerifications() {
     setFarmers(data || []);
   };
 
-  const handleViewDetails = (farmer: FarmerProfile) => {
+  // Generate signed URLs for documents
+  const getSignedUrl = useCallback(async (filePath: string | null): Promise<string | null> => {
+    if (!filePath) return null;
+    
+    // Check if it's already a full URL (legacy data)
+    if (filePath.startsWith('http')) {
+      return filePath;
+    }
+    
+    const { data, error } = await supabase.storage
+      .from('farmer-documents')
+      .createSignedUrl(filePath, 3600); // 1 hour expiry
+    
+    if (error) {
+      console.error('Error creating signed URL:', error);
+      return null;
+    }
+    return data.signedUrl;
+  }, []);
+
+  const loadDocumentUrls = useCallback(async (farmer: FarmerProfile) => {
+    setLoadingDocs(true);
+    const urls: Record<string, string> = {};
+    
+    if (farmer.id_document_url) {
+      const url = await getSignedUrl(farmer.id_document_url);
+      if (url) urls.id_document = url;
+    }
+    
+    if (farmer.farm_registration_url) {
+      const url = await getSignedUrl(farmer.farm_registration_url);
+      if (url) urls.farm_registration = url;
+    }
+    
+    if (farmer.certification_urls) {
+      for (let i = 0; i < farmer.certification_urls.length; i++) {
+        const url = await getSignedUrl(farmer.certification_urls[i]);
+        if (url) urls[`cert_${i}`] = url;
+      }
+    }
+    
+    setDocumentUrls(urls);
+    setLoadingDocs(false);
+  }, [getSignedUrl]);
+
+  const handleViewDetails = async (farmer: FarmerProfile) => {
     setSelectedFarmer(farmer);
     setVerificationNotes(farmer.verification_notes || '');
     setIsDialogOpen(true);
+    await loadDocumentUrls(farmer);
   };
 
   const handleUpdateStatus = async (
@@ -295,32 +344,45 @@ export default function FarmerVerifications() {
                 {/* Documents */}
                 <div>
                   <h3 className="font-semibold text-foreground mb-2">Verification Documents</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedFarmer.id_document_url && (
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={selectedFarmer.id_document_url} target="_blank" rel="noopener noreferrer">
-                          <FileText className="h-4 w-4 mr-1" />
-                          ID Document
-                        </a>
-                      </Button>
-                    )}
-                    {selectedFarmer.farm_registration_url && (
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={selectedFarmer.farm_registration_url} target="_blank" rel="noopener noreferrer">
-                          <FileText className="h-4 w-4 mr-1" />
-                          Farm Registration
-                        </a>
-                      </Button>
-                    )}
-                    {selectedFarmer.certification_urls?.map((url, i) => (
-                      <Button key={i} variant="outline" size="sm" asChild>
-                        <a href={url} target="_blank" rel="noopener noreferrer">
-                          <FileText className="h-4 w-4 mr-1" />
-                          Certificate {i + 1}
-                        </a>
-                      </Button>
-                    ))}
-                  </div>
+                  {loadingDocs ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading documents...
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {documentUrls.id_document && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={documentUrls.id_document} target="_blank" rel="noopener noreferrer">
+                            <FileText className="h-4 w-4 mr-1" />
+                            ID Document
+                          </a>
+                        </Button>
+                      )}
+                      {documentUrls.farm_registration && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={documentUrls.farm_registration} target="_blank" rel="noopener noreferrer">
+                            <FileText className="h-4 w-4 mr-1" />
+                            Farm Registration
+                          </a>
+                        </Button>
+                      )}
+                      {selectedFarmer.certification_urls?.map((_, i) => (
+                        documentUrls[`cert_${i}`] && (
+                          <Button key={i} variant="outline" size="sm" asChild>
+                            <a href={documentUrls[`cert_${i}`]} target="_blank" rel="noopener noreferrer">
+                              <FileText className="h-4 w-4 mr-1" />
+                              Certificate {i + 1}
+                            </a>
+                          </Button>
+                        )
+                      ))}
+                      {!documentUrls.id_document && !documentUrls.farm_registration && 
+                       !selectedFarmer.certification_urls?.length && (
+                        <p className="text-sm text-muted-foreground">No documents uploaded</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Bank Details */}
