@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.send-payout-notification]
 verify_jwt = false
+
+[functions.verify-bank-account]
+verify_jwt = true
+
+[functions.send-farmer-verification-email]
+verify_jwt = false
