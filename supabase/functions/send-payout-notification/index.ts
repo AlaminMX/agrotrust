@@ -8,6 +8,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// HTML escape function to prevent XSS in emails
+function escapeHtml(text: string): string {
+  const map: { [key: string]: string } = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return text.replace(/[&<>"']/g, (char) => map[char]);
+}
+
 interface PayoutEmailRequest {
   farmerId: string;
   orderNumber: string;
@@ -84,6 +96,11 @@ serve(async (req) => {
     const formatNaira = (amount: number) => 
       new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount);
 
+    // SECURITY: Escape user input to prevent XSS in emails
+    const safeFarmName = escapeHtml(farmer.farm_name);
+    const safeBankName = farmer.bank_name ? escapeHtml(farmer.bank_name) : '';
+    const safeOrderNumber = escapeHtml(orderNumber);
+
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -99,9 +116,9 @@ serve(async (req) => {
         </div>
         
         <div style="background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-          <p style="margin-top: 0;">Hello <strong>${farmer.farm_name}</strong>,</p>
+          <p style="margin-top: 0;">Hello <strong>${safeFarmName}</strong>,</p>
           
-          <p>Great news! A customer has confirmed delivery for order <strong>#${orderNumber}</strong>, and your payment is being processed.</p>
+          <p>Great news! A customer has confirmed delivery for order <strong>#${safeOrderNumber}</strong>, and your payment is being processed.</p>
           
           <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border: 1px solid #e5e7eb;">
             <h3 style="margin: 0 0 15px 0; color: #166534;">Payment Breakdown</h3>
@@ -121,11 +138,11 @@ serve(async (req) => {
             </table>
           </div>
           
-          ${farmer.bank_name ? `
+          ${safeBankName ? `
           <div style="background: #ecfdf5; border-radius: 8px; padding: 15px; margin: 20px 0; border: 1px solid #a7f3d0;">
             <p style="margin: 0; font-size: 14px;">
               <strong>💳 Bank Account:</strong><br>
-              ${farmer.bank_name}<br>
+              ${safeBankName}<br>
               ****${farmer.bank_account_number?.slice(-4) || '****'}
             </p>
           </div>
@@ -161,7 +178,7 @@ serve(async (req) => {
       body: JSON.stringify({
         from: "AgroTrust <notifications@resend.dev>",
         to: [user.email],
-        subject: `💰 Payment Received for Order #${orderNumber}`,
+        subject: `💰 Payment Received for Order #${safeOrderNumber}`,
         html: emailHtml,
       }),
     });
