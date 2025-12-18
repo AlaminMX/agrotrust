@@ -153,22 +153,22 @@ export const JumiaHeader = () => {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
-            {/* Farmer Upload Product - Visible for farmers */}
+            {/* Farmer Upload Product - Visible for farmers on desktop only */}
             {isFarmer && (
               <Link 
                 to="/farmer/products/add" 
-                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 Upload Product
               </Link>
             )}
 
-            {/* Profile Link - Visible for non-admins only */}
-            {user && !isAdmin && (
+            {/* Profile Link - Visible for non-admins and non-farmers only on desktop */}
+            {user && !isAdmin && !isFarmer && (
               <Link 
                 to="/profile" 
-                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-foreground hover:text-primary transition-colors"
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-foreground hover:text-primary transition-colors"
               >
                 <User className="h-4 w-4" />
                 My Profile
@@ -361,7 +361,8 @@ export const JumiaHeader = () => {
             {user && (
               <div className="space-y-2">
                 <div className="flex gap-2">
-                  {!isAdmin && (
+                  {/* Profile - hidden for farmers (they use bottom nav) */}
+                  {!isAdmin && !isFarmer && (
                     <Link 
                       to="/profile" 
                       onClick={() => setIsMenuOpen(false)}
@@ -384,18 +385,20 @@ export const JumiaHeader = () => {
                       </Button>
                     </Link>
                   )}
+                  {/* Farmer dashboard link in mobile menu */}
                   {isFarmer && (
                     <Link 
-                      to="/farmer/products/add" 
+                      to="/farmer/dashboard" 
                       onClick={() => setIsMenuOpen(false)}
                       className="flex-1"
                     >
-                      <Button className="w-full bg-primary">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Upload Product
+                      <Button variant="outline" className="w-full">
+                        <Store className="h-4 w-4 mr-2" />
+                        Farmer Dashboard
                       </Button>
                     </Link>
                   )}
+                  {/* Become a Farmer - only for non-farmers */}
                   {!isFarmer && !isAdmin && (
                     <Link 
                       to="/farmer/onboarding" 

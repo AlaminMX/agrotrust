@@ -133,39 +133,35 @@ export default function FarmerOnboarding() {
     }
 
     setIsVerifyingBank(true);
+    setAccountName('');
+    setBankVerified(false);
+
     try {
-      // For now, we'll just ask the user to confirm the account name
-      // In production, you would verify with Paystack's resolve endpoint
-      toast({
-        title: 'Enter Account Name',
-        description: 'Please enter the exact name on your bank account',
+      const { data, error } = await supabase.functions.invoke('verify-bank-account', {
+        body: { accountNumber, bankCode },
       });
-      setBankVerified(false);
+
+      if (error || !data?.success) {
+        throw new Error(data?.error || error?.message || 'Could not verify account');
+      }
+
+      // Set the account name from Paystack verification
+      setAccountName(data.accountName);
+      setBankVerified(true);
+      
+      toast({
+        title: 'Account Verified!',
+        description: `Account holder: ${data.accountName}`,
+      });
     } catch (error: any) {
       toast({
         title: 'Verification Failed',
-        description: error.message,
+        description: error.message || 'Could not verify bank account. Please check your details.',
         variant: 'destructive',
       });
     } finally {
       setIsVerifyingBank(false);
     }
-  };
-
-  const confirmBankDetails = () => {
-    if (accountName.length < 3) {
-      toast({
-        title: 'Invalid Name',
-        description: 'Please enter the full name on your bank account',
-        variant: 'destructive',
-      });
-      return;
-    }
-    setBankVerified(true);
-    toast({
-      title: 'Bank Details Saved',
-      description: 'Your bank details have been saved. Continue to upload documents.',
-    });
   };
 
   const handleSubmit = async () => {
@@ -465,58 +461,59 @@ export default function FarmerOnboarding() {
 
                 <div className="space-y-2">
                   <Label htmlFor="accountNumber">Account Number *</Label>
-                  <Input
-                    id="accountNumber"
-                    placeholder="10-digit account number"
-                    value={accountNumber}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                      setAccountNumber(val);
-                      setBankVerified(false);
-                    }}
-                    maxLength={10}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="accountName">Account Name *</Label>
-                  <Input
-                    id="accountName"
-                    placeholder="Name on your bank account"
-                    value={accountName}
-                    onChange={(e) => setAccountName(e.target.value)}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="accountNumber"
+                      placeholder="10-digit account number"
+                      value={accountNumber}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setAccountNumber(val);
+                        setBankVerified(false);
+                        setAccountName('');
+                      }}
+                      maxLength={10}
+                      className="flex-1"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={verifyBankAccount}
+                      disabled={isVerifyingBank || !bankCode || accountNumber.length !== 10}
+                    >
+                      {isVerifyingBank ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        'Verify'
+                      )}
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Enter the exact name as it appears on your bank account
+                    Enter your account number and click Verify to auto-fill account name
                   </p>
                 </div>
 
-                {!bankVerified && bankCode && accountNumber.length === 10 && accountName.length >= 3 && (
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={confirmBankDetails}
-                    disabled={isVerifyingBank}
-                    className="w-full"
-                  >
-                    {isVerifyingBank ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                    )}
-                    Confirm Bank Details
-                  </Button>
+                {accountName && (
+                  <div className="space-y-2">
+                    <Label htmlFor="accountName">Account Name</Label>
+                    <Input
+                      id="accountName"
+                      value={accountName}
+                      readOnly
+                      className="bg-muted"
+                    />
+                  </div>
                 )}
 
                 {bankVerified && (
                   <div className="flex items-center gap-2 text-primary bg-primary/10 p-3 rounded-lg">
                     <CheckCircle2 className="h-5 w-5" />
-                    <span>Bank details confirmed</span>
+                    <span>Account verified: {accountName}</span>
                   </div>
                 )}
                 
                 <div className="flex justify-between pt-4">
-                  <Button variant="outline" onClick={() => setStep('bank')}>
+                  <Button variant="outline" onClick={() => setStep('details')}>
                     <ArrowLeft className="mr-2 h-4 w-4" /> Back
                   </Button>
                   <Button 

@@ -30,7 +30,9 @@ import {
   FileText,
   MapPin,
   Calendar,
-  Loader2
+  Loader2,
+  Trash2,
+  UserX
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -179,10 +181,121 @@ export default function FarmerVerifications() {
       }, { onConflict: 'user_id,role' });
     }
 
+    // Send verification email
+    try {
+      await supabase.functions.invoke('send-farmer-verification-email', {
+        body: { 
+          farmerId, 
+          status,
+          farmName: selectedFarmer?.farm_name,
+          verificationNotes
+        },
+      });
+      console.log('Verification email sent');
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+    }
+
     toast.success(`Farmer ${status === 'approved' ? 'approved' : status === 'rejected' ? 'rejected' : 'marked for review'}`);
     setIsDialogOpen(false);
     setProcessingId(null);
     await fetchFarmers();
+  };
+
+  const handleDeleteFarmer = async (farmerId: string, userId: string) => {
+    if (!confirm('Are you sure you want to remove this farmer? They will lose farmer privileges but keep their consumer account.')) {
+      return;
+    }
+
+    setProcessingId(farmerId);
+
+    try {
+      // Remove farmer role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId)
+        .eq('role', 'farmer');
+
+      if (roleError) {
+        throw roleError;
+      }
+
+      // Delete farmer profile
+      const { error: profileError } = await supabase
+        .from('farmer_profiles')
+        .delete()
+        .eq('id', farmerId);
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      toast.success('Farmer has been removed. They can reapply if they wish.');
+      setIsDialogOpen(false);
+      await fetchFarmers();
+    } catch (error: any) {
+      toast.error('Failed to remove farmer: ' + error.message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleUnverifyFarmer = async (farmerId: string, userId: string) => {
+    if (!confirm('Are you sure you want to unverify this farmer? They will need to be re-approved to sell products.')) {
+      return;
+    }
+
+    setProcessingId(farmerId);
+
+    try {
+      // Update status to rejected
+      const { error: updateError } = await supabase
+        .from('farmer_profiles')
+        .update({
+          verification_status: 'rejected',
+          verification_notes: verificationNotes || 'Account unverified by admin',
+          verified_at: null,
+        })
+        .eq('id', farmerId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Remove farmer role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId)
+        .eq('role', 'farmer');
+
+      if (roleError) {
+        throw roleError;
+      }
+
+      // Send notification email
+      try {
+        await supabase.functions.invoke('send-farmer-verification-email', {
+          body: { 
+            farmerId, 
+            status: 'rejected',
+            farmName: selectedFarmer?.farm_name,
+            verificationNotes: verificationNotes || 'Your farmer account has been unverified by admin.'
+          },
+        });
+      } catch (emailError) {
+        console.error('Failed to send notification email:', emailError);
+      }
+
+      toast.success('Farmer has been unverified.');
+      setIsDialogOpen(false);
+      await fetchFarmers();
+    } catch (error: any) {
+      toast.error('Failed to unverify farmer: ' + error.message);
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -410,7 +523,7 @@ export default function FarmerVerifications() {
               </div>
             )}
 
-            <DialogFooter className="flex gap-2 sm:gap-0">
+            <DialogFooter className="flex flex-wrap gap-2 sm:gap-0">
               {selectedFarmer?.verification_status !== 'approved' && (
                 <Button
                   onClick={() => handleUpdateStatus(selectedFarmer!.id, 'approved')}
@@ -440,6 +553,28 @@ export default function FarmerVerifications() {
                   <XCircle className="h-4 w-4" />
                   Reject
                 </Button>
+              )}
+              {selectedFarmer?.verification_status === 'approved' && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleUnverifyFarmer(selectedFarmer!.id, selectedFarmer!.user_id)}
+                    disabled={processingId === selectedFarmer?.id}
+                    className="gap-1 text-amber-600 hover:text-amber-700 border-amber-300"
+                  >
+                    <UserX className="h-4 w-4" />
+                    Unverify
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleDeleteFarmer(selectedFarmer!.id, selectedFarmer!.user_id)}
+                    disabled={processingId === selectedFarmer?.id}
+                    className="gap-1"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Farmer
+                  </Button>
+                </>
               )}
             </DialogFooter>
           </DialogContent>
