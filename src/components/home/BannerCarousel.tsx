@@ -11,7 +11,7 @@ const banners = [
     subtitle: 'Skip the middlemen. Get farm-fresh products at fair prices.',
     cta: 'Shop Now',
     link: '/products',
-    gradient: 'from-primary/90 to-primary/70',
+    gradient: 'from-black/40 via-black/20 to-transparent',
     image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1920&h=800&fit=crop&q=80',
   },
   {
@@ -20,7 +20,7 @@ const banners = [
     subtitle: 'Every farmer on AgroTrust is verified for quality and reliability.',
     cta: 'Meet Our Farmers',
     link: '/products',
-    gradient: 'from-earth/90 to-earth/70',
+    gradient: 'from-black/40 via-black/20 to-transparent',
     image: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=1920&h=800&fit=crop&q=80',
   },
   {
@@ -29,7 +29,7 @@ const banners = [
     subtitle: 'Escrow payment ensures you only pay when satisfied with delivery.',
     cta: 'Learn More',
     link: '/how-it-works',
-    gradient: 'from-forest/90 to-forest-light/70',
+    gradient: 'from-black/40 via-black/20 to-transparent',
     image: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?w=1920&h=800&fit=crop&q=80',
   },
   {
@@ -38,7 +38,7 @@ const banners = [
     subtitle: 'Fresh produce delivered straight to your doorstep.',
     cta: 'Start Shopping',
     link: '/products',
-    gradient: 'from-orange/90 to-orange-dark/70',
+    gradient: 'from-black/40 via-black/20 to-transparent',
     image: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=1920&h=800&fit=crop&q=80',
   },
 ];
@@ -99,7 +99,7 @@ export const BannerCarousel = () => {
                 <Link to={banner.link}>
                   <Button 
                     size="lg" 
-                    className="bg-white text-foreground hover:bg-white/90 font-semibold shadow-lg hover:shadow-xl transition-all"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-lg hover:shadow-xl transition-all"
                   >
                     {banner.cta}
                   </Button>
