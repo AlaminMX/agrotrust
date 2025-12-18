@@ -29,7 +29,39 @@ serve(async (req) => {
 
     const { farmerId, orderNumber, amount, platformFee, farmerPayout }: PayoutEmailRequest = await req.json();
 
-    console.log(`Sending payout notification email for order ${orderNumber} to farmer ${farmerId}`);
+    console.log(`Validating payout for order ${orderNumber} and farmer ${farmerId}`);
+
+    // SECURITY: Verify that a matching payout exists in the database
+    const { data: payout, error: payoutError } = await supabase
+      .from('payouts')
+      .select('id, created_at')
+      .eq('farmer_id', farmerId)
+      .eq('amount', amount)
+      .eq('platform_fee', platformFee)
+      .eq('farmer_payout', farmerPayout)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (payoutError || !payout) {
+      console.error('No matching payout found:', payoutError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid payout request - no matching payout found' }),
+        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Only send email if payout was created in last 5 minutes (prevents replay attacks)
+    const payoutAge = Date.now() - new Date(payout.created_at).getTime();
+    if (payoutAge > 5 * 60 * 1000) {
+      console.error('Payout request expired:', payoutAge);
+      return new Response(
+        JSON.stringify({ error: 'Payout request expired' }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    console.log(`Payout validated, sending notification email for order ${orderNumber}`);
 
     // Get farmer profile with email
     const { data: farmer, error: farmerError } = await supabase
