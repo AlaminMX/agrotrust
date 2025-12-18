@@ -13,10 +13,35 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const paystackSecretKey = Deno.env.get("PAYSTACK_SECRET_KEY")!;
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // SECURITY: Verify authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: "Missing authorization" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create client with user's auth token
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error('Unauthorized user:', userError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Payment initialization request from user: ${user.id}`);
 
     const { email, amount, metadata, callback_url } = await req.json();
 
@@ -25,6 +50,36 @@ serve(async (req) => {
         JSON.stringify({ error: "Email and amount are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // SECURITY: Verify user owns the orders if order_ids provided
+    if (metadata?.order_ids && Array.isArray(metadata.order_ids)) {
+      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+      
+      for (const orderId of metadata.order_ids) {
+        const { data: order, error: orderError } = await serviceClient
+          .from('orders')
+          .select('consumer_id')
+          .eq('id', orderId)
+          .single();
+
+        if (orderError || !order) {
+          console.error(`Order not found: ${orderId}`, orderError);
+          return new Response(
+            JSON.stringify({ error: "Order not found" }),
+            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        if (order.consumer_id !== user.id) {
+          console.error(`Unauthorized: Order ${orderId} does not belong to user ${user.id}`);
+          return new Response(
+            JSON.stringify({ error: "Unauthorized: Order does not belong to user" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+      console.log(`Verified ownership of ${metadata.order_ids.length} orders`);
     }
 
     // Initialize Paystack transaction
@@ -45,11 +100,14 @@ serve(async (req) => {
     const data = await response.json();
 
     if (!data.status) {
+      console.error('Paystack initialization failed:', data.message);
       return new Response(
         JSON.stringify({ error: data.message || "Payment initialization failed" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log(`Payment initialized successfully for user ${user.id}, reference: ${data.data.reference}`);
 
     return new Response(
       JSON.stringify({

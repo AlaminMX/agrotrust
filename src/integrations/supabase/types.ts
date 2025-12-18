@@ -289,6 +289,13 @@ export type Database = {
             referencedRelation: "farmer_profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_profiles_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       payouts: {
@@ -334,6 +341,13 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "farmer_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payouts_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_profiles_public"
             referencedColumns: ["id"]
           },
           {
@@ -409,6 +423,13 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "farmer_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_profiles_public"
             referencedColumns: ["id"]
           },
         ]
@@ -526,7 +547,63 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      farmer_profiles_public: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          farm_description: string | null
+          farm_name: string | null
+          farm_size: string | null
+          id: string | null
+          pending_payout: number | null
+          produce_types: string[] | null
+          state: string | null
+          total_earnings: number | null
+          updated_at: string | null
+          user_id: string | null
+          verification_status:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          farm_description?: string | null
+          farm_name?: string | null
+          farm_size?: string | null
+          id?: string | null
+          pending_payout?: number | null
+          produce_types?: string[] | null
+          state?: string | null
+          total_earnings?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          farm_description?: string | null
+          farm_name?: string | null
+          farm_size?: string | null
+          id?: string | null
+          pending_payout?: number | null
+          produce_types?: string[] | null
+          state?: string | null
+          total_earnings?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_farmer_profile_id: { Args: { _user_id: string }; Returns: string }
