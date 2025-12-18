@@ -8,6 +8,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// HTML escape function to prevent XSS in emails
+function escapeHtml(text: string): string {
+  const map: { [key: string]: string } = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return text.replace(/[&<>"']/g, (char) => map[char]);
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -51,6 +63,10 @@ serve(async (req) => {
 
     const email = userData.user.email;
     const finalFarmName = farmName || farmerProfile.farm_name;
+    
+    // SECURITY: Escape user input to prevent XSS in emails
+    const safeFarmName = escapeHtml(finalFarmName);
+    const safeVerificationNotes = verificationNotes ? escapeHtml(verificationNotes) : '';
 
     let subject: string;
     let htmlContent: string;
@@ -65,7 +81,7 @@ serve(async (req) => {
           
           <h2 style="color: #333;">Welcome to AgroTrust, Verified Farmer!</h2>
           
-          <p>Dear ${finalFarmName},</p>
+          <p>Dear ${safeFarmName},</p>
           
           <p>Great news! Your farmer application has been <strong style="color: #16a34a;">approved</strong>. 
           You are now a verified farmer on AgroTrust marketplace.</p>
@@ -80,10 +96,10 @@ serve(async (req) => {
             </ul>
           </div>
           
-          ${verificationNotes ? `
+          ${safeVerificationNotes ? `
           <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
             <h4 style="margin-top: 0;">Note from Admin:</h4>
-            <p style="margin-bottom: 0;">${verificationNotes}</p>
+            <p style="margin-bottom: 0;">${safeVerificationNotes}</p>
           </div>
           ` : ''}
           
@@ -107,15 +123,15 @@ serve(async (req) => {
           
           <h2 style="color: #333;">Application Status Update</h2>
           
-          <p>Dear ${finalFarmName},</p>
+          <p>Dear ${safeFarmName},</p>
           
           <p>Thank you for your interest in becoming a farmer on AgroTrust. After reviewing your application, 
           we regret to inform you that your application was not approved at this time.</p>
           
-          ${verificationNotes ? `
+          ${safeVerificationNotes ? `
           <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0;">
             <h4 style="margin-top: 0;">Reason:</h4>
-            <p style="margin-bottom: 0;">${verificationNotes}</p>
+            <p style="margin-bottom: 0;">${safeVerificationNotes}</p>
           </div>
           ` : ''}
           
@@ -140,7 +156,7 @@ serve(async (req) => {
           
           <h2 style="color: #333;">Application Under Review</h2>
           
-          <p>Dear ${finalFarmName},</p>
+          <p>Dear ${safeFarmName},</p>
           
           <p>Your farmer application is currently under review by our team. 
           We'll get back to you within 1-2 business days.</p>
