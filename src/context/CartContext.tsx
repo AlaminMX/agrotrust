@@ -1,9 +1,16 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import { CartItem, Product, State } from '@/types';
 import { DELIVERY_FEES } from '@/data/mockData';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
-const CART_STORAGE_KEY = 'agrotrust_cart';
 const STATE_STORAGE_KEY = 'agrotrust_state';
+
+// Helper to get cart storage key for a specific user
+const getCartStorageKey = (userId: string | null) => {
+  return userId ? `agrotrust_cart_${userId}` : null;
+};
 
 interface FarmerGroup {
   farmerId: string;
@@ -17,7 +24,7 @@ interface CartContextType {
   items: CartItem[];
   selectedState: State;
   setSelectedState: (state: State) => void;
-  addToCart: (product: Product, quantity?: number) => void;
+  addToCart: (product: Product, quantity?: number) => boolean;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -34,10 +41,13 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-// Helper to load cart from localStorage
-const loadCartFromStorage = (): CartItem[] => {
+// Helper to load cart from localStorage for a specific user
+const loadCartFromStorage = (userId: string | null): CartItem[] => {
+  if (!userId) return [];
   try {
-    const stored = localStorage.getItem(CART_STORAGE_KEY);
+    const key = getCartStorageKey(userId);
+    if (!key) return [];
+    const stored = localStorage.getItem(key);
     return stored ? JSON.parse(stored) : [];
   } catch {
     return [];
@@ -54,14 +64,37 @@ const loadStateFromStorage = (): State => {
   }
 };
 
+// Helper to save cart to localStorage for a specific user
+const saveCartToStorage = (userId: string | null, items: CartItem[]) => {
+  if (!userId) return;
+  const key = getCartStorageKey(userId);
+  if (key) {
+    localStorage.setItem(key, JSON.stringify(items));
+  }
+};
+
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [items, setItems] = useState<CartItem[]>(() => loadCartFromStorage());
+  const { user } = useAuth();
+  const [items, setItems] = useState<CartItem[]>([]);
   const [selectedState, setSelectedStateInternal] = useState<State>(() => loadStateFromStorage());
 
-  // Persist cart to localStorage
+  // Load cart when user changes
   useEffect(() => {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-  }, [items]);
+    if (user?.id) {
+      const userCart = loadCartFromStorage(user.id);
+      setItems(userCart);
+    } else {
+      // Clear cart when user logs out
+      setItems([]);
+    }
+  }, [user?.id]);
+
+  // Persist cart to localStorage when items change (only if user is logged in)
+  useEffect(() => {
+    if (user?.id) {
+      saveCartToStorage(user.id, items);
+    }
+  }, [items, user?.id]);
 
   // Persist state to localStorage
   useEffect(() => {
@@ -72,7 +105,20 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSelectedStateInternal(state);
   }, []);
 
-  const addToCart = useCallback((product: Product, quantity = 1) => {
+  const addToCart = useCallback((product: Product, quantity = 1): boolean => {
+    // Check if user is logged in
+    if (!user) {
+      toast.error('Please sign in to add items to your cart', {
+        action: {
+          label: 'Sign In',
+          onClick: () => {
+            window.location.href = '/auth';
+          },
+        },
+      });
+      return false;
+    }
+
     setItems(prev => {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
@@ -84,7 +130,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return [...prev, { product, quantity }];
     });
-  }, []);
+    return true;
+  }, [user]);
 
   const removeFromCart = useCallback((productId: string) => {
     setItems(prev => prev.filter(item => item.product.id !== productId));
@@ -104,7 +151,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = useCallback(() => {
     setItems([]);
-  }, []);
+    // Also clear from storage
+    if (user?.id) {
+      const key = getCartStorageKey(user.id);
+      if (key) {
+        localStorage.removeItem(key);
+      }
+    }
+  }, [user?.id]);
 
   // Group items by farmer
   const itemsByFarmer = useMemo(() => {
