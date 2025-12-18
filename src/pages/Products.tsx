@@ -23,10 +23,13 @@ interface DatabaseProduct {
   average_rating: number | null;
   review_count: number | null;
   state: string | null;
+  farmer_id: string;
   farmer_profiles: {
+    id: string;
     farm_name: string;
     state: string;
     verification_status: string;
+    user_id: string;
   };
 }
 
@@ -64,10 +67,13 @@ const Products = () => {
           average_rating,
           review_count,
           state,
+          farmer_id,
           farmer_profiles!inner (
+            id,
             farm_name,
             state,
-            verification_status
+            verification_status,
+            user_id
           )
         `)
         .eq('is_active', true)
@@ -118,7 +124,7 @@ const Products = () => {
       unit: product.unit,
       category: product.category as ProductCategory,
       image: product.image_url || '/placeholder.svg',
-      farmerId: product.id,
+      farmerId: product.farmer_profiles.id,
       farmerName: product.farmer_profiles.farm_name,
       farmName: product.farmer_profiles.farm_name,
       state: (product.state || product.farmer_profiles.state) as State,
@@ -126,7 +132,6 @@ const Products = () => {
       rating: product.average_rating || 0,
       reviewCount: product.review_count || 0,
       isVerified: product.farmer_profiles.verification_status === 'approved',
-      inStock: product.available_quantity > 0,
     }));
   }, [filteredProducts]);
 

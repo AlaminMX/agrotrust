@@ -2,29 +2,161 @@ import { useParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
-import { getProductById, getFarmerById } from '@/data/mockData';
 import { useCart } from '@/context/CartContext';
 import { formatPrice, formatDate } from '@/lib/format';
-import { STATES } from '@/types';
-import { Star, MapPin, Minus, Plus, ShoppingCart, ArrowLeft, Calendar } from 'lucide-react';
-import { useState } from 'react';
+import { STATES, Product, State } from '@/types';
+import { Star, MapPin, Minus, Plus, ShoppingCart, ArrowLeft, Calendar, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { ProductReviews } from '@/components/reviews/ProductReviews';
+import { supabase } from '@/integrations/supabase/client';
+
+interface DatabaseProduct {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  unit: string;
+  category: string;
+  image_url: string | null;
+  available_quantity: number;
+  average_rating: number | null;
+  review_count: number | null;
+  state: string | null;
+  farmer_id: string;
+  farmer_profiles: {
+    id: string;
+    farm_name: string;
+    state: string;
+    verification_status: string;
+    farm_description: string | null;
+    user_id: string;
+    created_at: string;
+  } | null;
+}
+
+interface FarmerProfile {
+  id: string;
+  farm_name: string;
+  state: string;
+  verification_status: string;
+  farm_description: string | null;
+  user_id: string;
+  created_at: string;
+  full_name?: string;
+  avatar_url?: string;
+}
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { addToCart } = useCart();
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [farmer, setFarmer] = useState<FarmerProfile | null>(null);
 
-  const product = id ? getProductById(id) : undefined;
-  const farmer = product ? getFarmerById(product.farmerId) : undefined;
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!id) return;
+      
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select(`
+            *,
+            farmer_profiles (
+              id,
+              farm_name,
+              state,
+              verification_status,
+              farm_description,
+              user_id,
+              created_at
+            )
+          `)
+          .eq('id', id)
+          .maybeSingle();
+
+        if (error) throw error;
+        
+        if (data) {
+          const dbProduct = data as DatabaseProduct;
+          const farmerProfile = dbProduct.farmer_profiles;
+          
+          // Get farmer's profile info (name, avatar)
+          let farmerName = farmerProfile?.farm_name || 'Unknown Farm';
+          let farmerAvatar = '';
+          
+          if (farmerProfile?.user_id) {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('full_name, avatar_url')
+              .eq('user_id', farmerProfile.user_id)
+              .maybeSingle();
+            
+            if (profileData) {
+              farmerName = profileData.full_name || farmerProfile.farm_name;
+              farmerAvatar = profileData.avatar_url || '';
+            }
+          }
+          
+          // Transform to Product type
+          const transformedProduct: Product = {
+            id: dbProduct.id,
+            name: dbProduct.name,
+            description: dbProduct.description || '',
+            price: dbProduct.price,
+            unit: dbProduct.unit,
+            category: dbProduct.category,
+            image: dbProduct.image_url || '/placeholder.svg',
+            farmerId: farmerProfile?.id || dbProduct.farmer_id,
+            farmerName: farmerName,
+            farmName: farmerProfile?.farm_name || 'Unknown Farm',
+            state: (dbProduct.state || farmerProfile?.state || 'abuja') as State,
+            available: dbProduct.available_quantity,
+            isVerified: farmerProfile?.verification_status === 'approved',
+            rating: dbProduct.average_rating || 0,
+            reviewCount: dbProduct.review_count || 0,
+          };
+          
+          setProduct(transformedProduct);
+          
+          if (farmerProfile) {
+            setFarmer({
+              ...farmerProfile,
+              full_name: farmerName,
+              avatar_url: farmerAvatar,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching product:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container py-20 flex justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
 
   if (!product) {
     return (
       <Layout>
         <div className="container py-20 text-center">
           <h1 className="text-2xl font-bold text-foreground mb-4">Product Not Found</h1>
+          <p className="text-muted-foreground mb-6">The product you're looking for doesn't exist or has been removed.</p>
           <Link to="/products">
             <Button>Browse Products</Button>
           </Link>
@@ -93,7 +225,7 @@ const ProductDetail = () => {
                   />
                 ))}
               </div>
-              <span className="font-medium text-foreground">{product.rating}</span>
+              <span className="font-medium text-foreground">{product.rating.toFixed(1)}</span>
               <span className="text-muted-foreground">({product.reviewCount} reviews)</span>
             </div>
 
@@ -147,30 +279,40 @@ const ProductDetail = () => {
               <div className="border-t border-border pt-6 mt-6">
                 <h3 className="font-semibold text-foreground mb-4">About the Farmer</h3>
                 <div className="flex gap-4">
-                  <img
-                    src={farmer.image}
-                    alt={farmer.name}
-                    className="w-16 h-16 rounded-full object-cover"
-                  />
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                    {farmer.avatar_url ? (
+                      <img
+                        src={farmer.avatar_url}
+                        alt={farmer.full_name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-2xl font-bold text-primary">
+                        {(farmer.full_name || farmer.farm_name).charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground">{farmer.name}</span>
-                      {farmer.isVerified && <VerifiedBadge size="sm" showText={false} />}
+                      <span className="font-medium text-foreground">{farmer.full_name || farmer.farm_name}</span>
+                      {farmer.verification_status === 'approved' && <VerifiedBadge size="sm" showText={false} />}
                     </div>
-                    <p className="text-sm text-earth font-medium">{farmer.farmName}</p>
+                    <p className="text-sm text-earth font-medium">{farmer.farm_name}</p>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <Star className="h-3 w-3 fill-gold text-gold" />
-                        {farmer.rating} ({farmer.reviewCount} reviews)
+                        <MapPin className="h-3 w-3" />
+                        {STATES.find(s => s.value === farmer.state)?.label || farmer.state}
                       </span>
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        Member since {formatDate(farmer.memberSince)}
+                        Member since {formatDate(farmer.created_at)}
                       </span>
                     </div>
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground mt-4">{farmer.bio}</p>
+                {farmer.farm_description && (
+                  <p className="text-sm text-muted-foreground mt-4">{farmer.farm_description}</p>
+                )}
               </div>
             )}
           </div>
