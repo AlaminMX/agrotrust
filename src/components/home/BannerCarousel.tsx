@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -8,38 +8,26 @@ const banners = [
   {
     id: 1,
     title: 'Fresh Produce, Direct from Farms',
-    subtitle: 'Skip the middlemen. Get farm-fresh products at fair prices.',
+    subtitle: 'Skip the middlemen. Get farm-fresh products at fair prices from verified Nigerian farmers.',
     cta: 'Shop Now',
     link: '/products',
-    gradient: 'from-black/40 via-black/20 to-transparent',
-    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1920&h=800&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=1920&h=800&fit=crop&q=80',
   },
   {
     id: 2,
     title: 'Verified Farmers You Can Trust',
-    subtitle: 'Every farmer on AgroTrust is verified for quality and reliability.',
+    subtitle: 'Every farmer on AgroTrust is verified for quality, reliability, and authenticity.',
     cta: 'Meet Our Farmers',
     link: '/products',
-    gradient: 'from-black/40 via-black/20 to-transparent',
-    image: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=1920&h=800&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=1920&h=800&fit=crop&q=80',
   },
   {
     id: 3,
     title: 'Your Money is Protected',
-    subtitle: 'Escrow payment ensures you only pay when satisfied with delivery.',
+    subtitle: 'Escrow payment ensures you only pay when satisfied with your delivery.',
     cta: 'Learn More',
     link: '/how-it-works',
-    gradient: 'from-black/40 via-black/20 to-transparent',
-    image: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?w=1920&h=800&fit=crop&q=80',
-  },
-  {
-    id: 4,
-    title: 'Free Delivery on Orders Above ₦20,000',
-    subtitle: 'Fresh produce delivered straight to your doorstep.',
-    cta: 'Start Shopping',
-    link: '/products',
-    gradient: 'from-black/40 via-black/20 to-transparent',
-    image: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=1920&h=800&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=1920&h=800&fit=crop&q=80',
   },
 ];
 
@@ -81,11 +69,8 @@ export const BannerCarousel = () => {
               className="absolute inset-0 bg-cover bg-center"
               style={{ backgroundImage: `url(${banner.image})` }}
             />
-            {/* Gradient Overlay */}
-            <div className={cn(
-              "absolute inset-0 bg-gradient-to-r",
-              banner.gradient
-            )} />
+            {/* Gradient Overlay - Lighter for better image visibility */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
             
             {/* Content */}
             <div className="relative h-full container flex items-center">
@@ -99,9 +84,10 @@ export const BannerCarousel = () => {
                 <Link to={banner.link}>
                   <Button 
                     size="lg" 
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-lg hover:shadow-xl transition-all"
+                    className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 font-semibold shadow-lg hover:shadow-xl transition-all px-8 py-6 text-lg group"
                   >
                     {banner.cta}
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
               </div>
@@ -115,7 +101,7 @@ export const BannerCarousel = () => {
         variant="ghost"
         size="icon"
         onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40 backdrop-blur-sm border border-white/20 transition-all"
+        className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-white/20 text-white hover:bg-white/40 backdrop-blur-sm border border-white/30 transition-all"
       >
         <ChevronLeft className="h-6 w-6" />
       </Button>
@@ -123,7 +109,7 @@ export const BannerCarousel = () => {
         variant="ghost"
         size="icon"
         onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40 backdrop-blur-sm border border-white/20 transition-all"
+        className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-white/20 text-white hover:bg-white/40 backdrop-blur-sm border border-white/30 transition-all"
       >
         <ChevronRight className="h-6 w-6" />
       </Button>
