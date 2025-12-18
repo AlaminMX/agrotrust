@@ -32,6 +32,7 @@ export const JumiaHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -57,6 +58,7 @@ export const JumiaHeader = () => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+      setIsSearchOpen(false);
     }
   };
 
@@ -132,8 +134,8 @@ export const JumiaHeader = () => {
             <span className="text-xl font-bold text-foreground hidden sm:block">AgroTrust</span>
           </Link>
 
-          {/* Search Bar */}
-          <form onSubmit={handleSearch} className="flex-1 max-w-2xl">
+          {/* Search Bar - Desktop */}
+          <form onSubmit={handleSearch} className="flex-1 max-w-2xl hidden md:block">
             <div className="relative flex">
               <input
                 type="text"
@@ -150,6 +152,16 @@ export const JumiaHeader = () => {
               </button>
             </div>
           </form>
+
+          {/* Search Icon - Mobile */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setIsSearchOpen(!isSearchOpen)}
+          >
+            <Search className="h-5 w-5" />
+          </Button>
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
@@ -352,6 +364,28 @@ export const JumiaHeader = () => {
           </nav>
         </div>
       </div>
+
+      {/* Mobile Search Bar */}
+      {isSearchOpen && (
+        <div className="md:hidden border-t border-border bg-card p-3">
+          <form onSubmit={handleSearch} className="relative flex">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search products, farms..."
+              autoFocus
+              className="w-full h-10 pl-4 pr-12 rounded-lg border-2 border-orange bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-orange-dark"
+            />
+            <button
+              type="submit"
+              className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center bg-orange rounded-r-lg hover:bg-orange-dark transition-colors"
+            >
+              <Search className="h-4 w-4 text-white" />
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* Mobile Navigation */}
       {isMenuOpen && (

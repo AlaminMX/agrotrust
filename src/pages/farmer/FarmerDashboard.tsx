@@ -8,9 +8,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { 
   Loader2, Package, ShoppingCart, DollarSign, TrendingUp, 
-  Plus, LogOut, Leaf, AlertCircle
+  Plus, LogOut, Leaf, AlertCircle, Home, ChevronDown
 } from 'lucide-react';
 import { formatNaira } from '@/lib/format';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function FarmerDashboard() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -18,6 +25,7 @@ export default function FarmerDashboard() {
   const [farmerProfile, setFarmerProfile] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
+  const [payouts, setPayouts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -62,14 +70,26 @@ export default function FarmerDashboard() {
 
       setProducts(productsData || []);
 
-      // Load orders
+      // Load orders - ONLY show orders with status 'paid' or later (not 'pending')
+      // Farmers should NOT see unpaid/incomplete orders
       const { data: ordersData } = await supabase
         .from('orders')
         .select('*, order_items(*)')
         .eq('farmer_id', profile.id)
+        .neq('status', 'pending') // Exclude pending/unpaid orders
         .order('created_at', { ascending: false });
 
       setOrders(ordersData || []);
+
+      // Load payouts - ONLY show completed/approved payouts
+      const { data: payoutsData } = await supabase
+        .from('payouts')
+        .select('*')
+        .eq('farmer_id', profile.id)
+        .eq('status', 'completed') // Only show approved/completed payouts
+        .order('created_at', { ascending: false });
+
+      setPayouts(payoutsData || []);
 
     } catch (error) {
       console.error('Error loading farmer data:', error);
@@ -91,6 +111,28 @@ export default function FarmerDashboard() {
     );
   }
 
+  // Map order statuses for farmer display
+  const getOrderDisplayStatus = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return 'Payment Received';
+      case 'processing':
+        return 'Processing';
+      case 'dispatched':
+        return 'Dispatched';
+      case 'out_for_delivery':
+        return 'Out for Delivery';
+      case 'delivered':
+        return 'Delivered';
+      case 'confirmed':
+        return 'Confirmed';
+      case 'disputed':
+        return 'Disputed';
+      default:
+        return status.replace('_', ' ');
+    }
+  };
+
   const stats = {
     activeProducts: products.filter(p => p.is_active).length,
     pendingOrders: orders.filter(o => ['paid', 'processing'].includes(o.status)).length,
@@ -108,6 +150,37 @@ export default function FarmerDashboard() {
             <span className="text-xl font-bold text-primary">Farmer Dashboard</span>
           </div>
           <div className="flex items-center gap-4">
+            {/* Navigation Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Home className="h-4 w-4 mr-2" />
+                  Navigate
+                  <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-card">
+                <DropdownMenuItem asChild>
+                  <Link to="/" className="flex items-center gap-2">
+                    <Home className="h-4 w-4" />
+                    Go to Homepage
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/products">Browse Products</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/profile">My Consumer Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/farmer/products/add" className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add New Product
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {farmerProfile?.farm_name}
             </span>
@@ -178,7 +251,7 @@ export default function FarmerDashboard() {
           <TabsContent value="products" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold">Your Products</h2>
-              <Link to="/farmer/products/new">
+              <Link to="/farmer/products/add">
                 <Button>
                   <Plus className="h-4 w-4 mr-2" /> Add Product
                 </Button>
@@ -193,7 +266,7 @@ export default function FarmerDashboard() {
                   <p className="text-muted-foreground mb-4">
                     Start by adding your first product to reach customers
                   </p>
-                  <Link to="/farmer/products/new">
+                  <Link to="/farmer/products/add">
                     <Button>
                       <Plus className="h-4 w-4 mr-2" /> Add Your First Product
                     </Button>
@@ -233,6 +306,7 @@ export default function FarmerDashboard() {
 
           <TabsContent value="orders" className="space-y-4">
             <h2 className="text-lg font-semibold">Orders</h2>
+            <p className="text-sm text-muted-foreground">Only orders with completed payment are shown here.</p>
             
             {orders.length === 0 ? (
               <Card>
@@ -240,7 +314,7 @@ export default function FarmerDashboard() {
                   <ShoppingCart className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="font-semibold mb-2">No orders yet</h3>
                   <p className="text-muted-foreground">
-                    Orders will appear here once customers start purchasing your products
+                    Orders will appear here once customers complete payment for your products
                   </p>
                 </CardContent>
               </Card>
@@ -252,10 +326,10 @@ export default function FarmerDashboard() {
                       <div className="flex justify-between items-center">
                         <CardTitle className="text-base">Order #{order.order_number}</CardTitle>
                         <Badge variant={
-                          order.status === 'delivered' ? 'default' :
+                          order.status === 'delivered' || order.status === 'confirmed' ? 'default' :
                           order.status === 'disputed' ? 'destructive' : 'secondary'
                         }>
-                          {order.status.replace('_', ' ')}
+                          {getOrderDisplayStatus(order.status)}
                         </Badge>
                       </div>
                       <CardDescription>
@@ -285,10 +359,11 @@ export default function FarmerDashboard() {
 
           <TabsContent value="payouts" className="space-y-4">
             <h2 className="text-lg font-semibold">Payouts</h2>
+            <p className="text-sm text-muted-foreground">Only admin-approved payouts are shown here.</p>
             
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Payout Information</CardTitle>
+                <CardTitle className="text-base">Payout Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -315,6 +390,32 @@ export default function FarmerDashboard() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Payout History */}
+            {payouts.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Payout History</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {payouts.map((payout) => (
+                      <div key={payout.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <div>
+                          <p className="font-medium">{formatNaira(payout.farmer_payout || payout.amount)}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(payout.processed_at || payout.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <Badge variant="default" className="bg-green-100 text-green-800">
+                          Completed
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="profile" className="space-y-4">

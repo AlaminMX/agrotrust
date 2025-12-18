@@ -33,28 +33,23 @@ const banners = [
 
 export const BannerCarousel = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
 
   const nextSlide = useCallback(() => {
     setCurrentSlide(prev => (prev + 1) % banners.length);
   }, []);
 
-  const prevSlide = () => {
+  const prevSlide = useCallback(() => {
     setCurrentSlide(prev => (prev - 1 + banners.length) % banners.length);
-  };
+  }, []);
 
+  // Auto-advance slides - always runs
   useEffect(() => {
-    if (isPaused) return;
     const timer = setInterval(nextSlide, 5000);
     return () => clearInterval(timer);
-  }, [isPaused, nextSlide]);
+  }, [nextSlide]);
 
   return (
-    <section 
-      className="relative overflow-hidden"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-    >
+    <section className="relative overflow-hidden">
       <div className="relative h-[300px] md:h-[450px] lg:h-[500px]">
         {banners.map((banner, index) => (
           <div
@@ -74,7 +69,7 @@ export const BannerCarousel = () => {
             
             {/* Content */}
             <div className="relative h-full container flex items-center">
-              <div className="max-w-xl space-y-4 md:space-y-6">
+              <div className="max-w-xl space-y-4 md:space-y-6 pr-16 md:pr-0">
                 <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight text-white drop-shadow-lg">
                   {banner.title}
                 </h2>
@@ -96,22 +91,22 @@ export const BannerCarousel = () => {
         ))}
       </div>
 
-      {/* Navigation Arrows */}
+      {/* Navigation Arrows - Smaller and repositioned */}
       <Button
         variant="ghost"
         size="icon"
         onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-white/20 text-white hover:bg-white/40 backdrop-blur-sm border border-white/30 transition-all"
+        className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 h-8 w-8 md:h-10 md:w-10 rounded-full bg-white/20 text-white hover:bg-white/40 backdrop-blur-sm border border-white/30 transition-all"
       >
-        <ChevronLeft className="h-6 w-6" />
+        <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
       </Button>
       <Button
         variant="ghost"
         size="icon"
         onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-white/20 text-white hover:bg-white/40 backdrop-blur-sm border border-white/30 transition-all"
+        className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 h-8 w-8 md:h-10 md:w-10 rounded-full bg-white/20 text-white hover:bg-white/40 backdrop-blur-sm border border-white/30 transition-all"
       >
-        <ChevronRight className="h-6 w-6" />
+        <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
       </Button>
 
       {/* Dots */}

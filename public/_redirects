@@ -1,0 +1,11 @@
+/*  Single Page Apps for GitHub Pages / Netlify / Lovable
+    This file ensures all routes are directed to index.html
+    so React Router can handle them client-side.
+*/
+/* Netlify */
+/*
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+*/

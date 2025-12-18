@@ -1,6 +1,9 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import { CartItem, Product, State } from '@/types';
 import { DELIVERY_FEES } from '@/data/mockData';
+
+const CART_STORAGE_KEY = 'agrotrust_cart';
+const STATE_STORAGE_KEY = 'agrotrust_state';
 
 interface FarmerGroup {
   farmerId: string;
@@ -31,9 +34,43 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+// Helper to load cart from localStorage
+const loadCartFromStorage = (): CartItem[] => {
+  try {
+    const stored = localStorage.getItem(CART_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+// Helper to load state from localStorage
+const loadStateFromStorage = (): State => {
+  try {
+    const stored = localStorage.getItem(STATE_STORAGE_KEY);
+    return (stored as State) || 'abuja';
+  } catch {
+    return 'abuja';
+  }
+};
+
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [selectedState, setSelectedState] = useState<State>('abuja');
+  const [items, setItems] = useState<CartItem[]>(() => loadCartFromStorage());
+  const [selectedState, setSelectedStateInternal] = useState<State>(() => loadStateFromStorage());
+
+  // Persist cart to localStorage
+  useEffect(() => {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
+
+  // Persist state to localStorage
+  useEffect(() => {
+    localStorage.setItem(STATE_STORAGE_KEY, selectedState);
+  }, [selectedState]);
+
+  const setSelectedState = useCallback((state: State) => {
+    setSelectedStateInternal(state);
+  }, []);
 
   const addToCart = useCallback((product: Product, quantity = 1) => {
     setItems(prev => {
