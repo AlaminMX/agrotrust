@@ -23,6 +23,7 @@ const categories = [
   { label: 'Poultry', value: 'poultry', icon: '🍗' },
   { label: 'Dairy', value: 'dairy', icon: '🥛' },
   { label: 'Herbs & Spices', value: 'herbs', icon: '🌿' },
+  { label: 'Meat', value: 'meat', icon: '🥩' },
 ];
 
 export const JumiaHeader = () => {
