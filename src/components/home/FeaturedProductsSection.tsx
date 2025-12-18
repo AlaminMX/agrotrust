@@ -22,45 +22,68 @@ export const FeaturedProductsSection = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
+      
+      // First fetch products
       let query = supabase
         .from('products')
-        .select(`
-          *,
-          farmer_profiles!inner (
-            farm_name,
-            verification_status
-          )
-        `)
+        .select('*')
         .eq('is_active', true)
-        .eq('farmer_profiles.verification_status', 'approved')
-        .limit(8);
+        .limit(16);
 
       if (activeTab !== 'all') {
         query = query.eq('category', activeTab);
       }
 
-      const { data } = await query;
+      const { data: productsData } = await query;
 
-      if (data) {
-        const transformed: Product[] = data.map(p => ({
-          id: p.id,
-          name: p.name,
-          description: p.description || '',
-          price: p.price,
-          unit: p.unit,
-          image: p.image_url || '/placeholder.svg',
-          category: p.category,
-          farmerId: p.farmer_id,
-          farmerName: p.farmer_profiles?.farm_name || 'Unknown',
-          farmName: p.farmer_profiles?.farm_name || 'Unknown Farm',
-          isVerified: p.farmer_profiles?.verification_status === 'approved',
-          rating: p.average_rating || 4.5,
-          reviewCount: p.review_count || 0,
-          available: p.available_quantity,
-          state: (p.state || 'abuja') as Product['state'],
-        }));
-        setProducts(transformed);
+      if (!productsData || productsData.length === 0) {
+        setProducts([]);
+        setLoading(false);
+        return;
       }
+
+      // Get unique farmer IDs
+      const farmerIds = [...new Set(productsData.map(p => p.farmer_id))];
+      
+      // Fetch farmer data from public view (safe - no sensitive data)
+      const { data: farmersData } = await supabase
+        .from('farmer_profiles_public')
+        .select('id, farm_name, verification_status')
+        .in('id', farmerIds)
+        .eq('verification_status', 'approved');
+
+      // Create farmer lookup map
+      const farmerMap = new Map<string, { farm_name: string; verification_status: string }>();
+      farmersData?.forEach(farmer => {
+        farmerMap.set(farmer.id, farmer);
+      });
+
+      // Combine and filter to only products from approved farmers
+      const transformed: Product[] = productsData
+        .filter(p => farmerMap.has(p.farmer_id))
+        .slice(0, 8)
+        .map(p => {
+          const farmer = farmerMap.get(p.farmer_id)!;
+          return {
+            id: p.id,
+            name: p.name,
+            description: p.description || '',
+            price: p.price,
+            unit: p.unit,
+            image: p.image_url || '/placeholder.svg',
+            category: p.category,
+            farmerId: p.farmer_id,
+            farmerName: farmer.farm_name || 'Unknown',
+            farmName: farmer.farm_name || 'Unknown Farm',
+            isVerified: farmer.verification_status === 'approved',
+            rating: p.average_rating || 4.5,
+            reviewCount: p.review_count || 0,
+            available: p.available_quantity,
+            state: (p.state || 'abuja') as Product['state'],
+          };
+        });
+      
+      setProducts(transformed);
       setLoading(false);
     };
     fetchProducts();

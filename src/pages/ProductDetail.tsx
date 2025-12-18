@@ -24,15 +24,6 @@ interface DatabaseProduct {
   review_count: number | null;
   state: string | null;
   farmer_id: string;
-  farmer_profiles: {
-    id: string;
-    farm_name: string;
-    state: string;
-    verification_status: string;
-    farm_description: string | null;
-    user_id: string;
-    created_at: string;
-  } | null;
 }
 
 interface FarmerProfile {
@@ -62,74 +53,78 @@ const ProductDetail = () => {
       
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        // First fetch the product
+        const { data: productData, error: productError } = await supabase
           .from('products')
-          .select(`
-            *,
-            farmer_profiles (
-              id,
-              farm_name,
-              state,
-              verification_status,
-              farm_description,
-              user_id,
-              created_at
-            )
-          `)
+          .select('*')
           .eq('id', id)
           .maybeSingle();
 
-        if (error) throw error;
+        if (productError) throw productError;
+        if (!productData) {
+          setLoading(false);
+          return;
+        }
         
-        if (data) {
-          const dbProduct = data as DatabaseProduct;
-          const farmerProfile = dbProduct.farmer_profiles;
+        const dbProduct = productData as DatabaseProduct;
+        
+        // Fetch farmer data from public view (safe - no sensitive data)
+        const { data: farmerData } = await supabase
+          .from('farmer_profiles_public')
+          .select('id, farm_name, state, verification_status, farm_description, user_id, created_at')
+          .eq('id', dbProduct.farmer_id)
+          .maybeSingle();
+
+        // Get farmer's profile info (name, avatar)
+        let farmerName = farmerData?.farm_name || 'Unknown Farm';
+        let farmerAvatar = '';
+        
+        if (farmerData?.user_id) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('user_id', farmerData.user_id)
+            .maybeSingle();
           
-          // Get farmer's profile info (name, avatar)
-          let farmerName = farmerProfile?.farm_name || 'Unknown Farm';
-          let farmerAvatar = '';
-          
-          if (farmerProfile?.user_id) {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('full_name, avatar_url')
-              .eq('user_id', farmerProfile.user_id)
-              .maybeSingle();
-            
-            if (profileData) {
-              farmerName = profileData.full_name || farmerProfile.farm_name;
-              farmerAvatar = profileData.avatar_url || '';
-            }
+          if (profileData) {
+            farmerName = profileData.full_name || farmerData.farm_name;
+            farmerAvatar = profileData.avatar_url || '';
           }
-          
-          // Transform to Product type
-          const transformedProduct: Product = {
-            id: dbProduct.id,
-            name: dbProduct.name,
-            description: dbProduct.description || '',
-            price: dbProduct.price,
-            unit: dbProduct.unit,
-            category: dbProduct.category,
-            image: dbProduct.image_url || '/placeholder.svg',
-            farmerId: farmerProfile?.id || dbProduct.farmer_id,
-            farmerName: farmerName,
-            farmName: farmerProfile?.farm_name || 'Unknown Farm',
-            state: (dbProduct.state || farmerProfile?.state || 'abuja') as State,
-            available: dbProduct.available_quantity,
-            isVerified: farmerProfile?.verification_status === 'approved',
-            rating: dbProduct.average_rating || 0,
-            reviewCount: dbProduct.review_count || 0,
-          };
-          
-          setProduct(transformedProduct);
-          
-          if (farmerProfile) {
-            setFarmer({
-              ...farmerProfile,
-              full_name: farmerName,
-              avatar_url: farmerAvatar,
-            });
-          }
+        }
+        
+        // Transform to Product type
+        const transformedProduct: Product = {
+          id: dbProduct.id,
+          name: dbProduct.name,
+          description: dbProduct.description || '',
+          price: dbProduct.price,
+          unit: dbProduct.unit,
+          category: dbProduct.category,
+          image: dbProduct.image_url || '/placeholder.svg',
+          farmerId: farmerData?.id || dbProduct.farmer_id,
+          farmerName: farmerName,
+          farmName: farmerData?.farm_name || 'Unknown Farm',
+          state: (dbProduct.state || farmerData?.state || 'abuja') as State,
+          available: dbProduct.available_quantity,
+          isVerified: farmerData?.verification_status === 'approved',
+          rating: dbProduct.average_rating || 0,
+          reviewCount: dbProduct.review_count || 0,
+        };
+        
+        setProduct(transformedProduct);
+        
+        if (farmerData) {
+          setFarmer({
+            id: farmerData.id,
+            farm_name: farmerData.farm_name,
+            state: farmerData.state,
+            verification_status: farmerData.verification_status,
+            farm_description: farmerData.farm_description,
+            user_id: farmerData.user_id,
+            created_at: farmerData.created_at,
+            full_name: farmerName,
+            avatar_url: farmerAvatar,
+          });
         }
       } catch (error) {
         console.error('Error fetching product:', error);

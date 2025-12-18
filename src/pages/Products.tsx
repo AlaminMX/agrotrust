@@ -24,13 +24,18 @@ interface DatabaseProduct {
   review_count: number | null;
   state: string | null;
   farmer_id: string;
-  farmer_profiles: {
-    id: string;
-    farm_name: string;
-    state: string;
-    verification_status: string;
-    user_id: string;
-  };
+}
+
+interface FarmerPublicProfile {
+  id: string;
+  farm_name: string;
+  state: string;
+  verification_status: string;
+  user_id: string;
+}
+
+interface ProductWithFarmer extends DatabaseProduct {
+  farmer?: FarmerPublicProfile;
 }
 
 const Products = () => {
@@ -38,7 +43,7 @@ const Products = () => {
   const { selectedState, setSelectedState, items, clearCart } = useCart();
   const [category, setCategory] = useState<ProductCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [products, setProducts] = useState<DatabaseProduct[]>([]);
+  const [products, setProducts] = useState<ProductWithFarmer[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Handle state from URL params (from onboarding)
@@ -53,7 +58,9 @@ const Products = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // First fetch products
+      const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select(`
           id,
@@ -67,24 +74,48 @@ const Products = () => {
           average_rating,
           review_count,
           state,
-          farmer_id,
-          farmer_profiles!inner (
-            id,
-            farm_name,
-            state,
-            verification_status,
-            user_id
-          )
+          farmer_id
         `)
-        .eq('is_active', true)
-        .eq('farmer_profiles.verification_status', 'approved');
+        .eq('is_active', true);
 
-      if (error) {
-        console.error('Error fetching products:', error);
+      if (productsError) {
+        console.error('Error fetching products:', productsError);
         toast.error('Failed to load products');
-      } else {
-        setProducts(data || []);
+        setLoading(false);
+        return;
       }
+
+      if (!productsData || productsData.length === 0) {
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get unique farmer IDs
+      const farmerIds = [...new Set(productsData.map(p => p.farmer_id))];
+      
+      // Fetch farmer data from public view (safe - no sensitive data)
+      const { data: farmersData } = await supabase
+        .from('farmer_profiles_public')
+        .select('id, farm_name, state, verification_status, user_id')
+        .in('id', farmerIds)
+        .eq('verification_status', 'approved');
+
+      // Create farmer lookup map
+      const farmerMap = new Map<string, FarmerPublicProfile>();
+      farmersData?.forEach(farmer => {
+        farmerMap.set(farmer.id, farmer as FarmerPublicProfile);
+      });
+
+      // Combine products with farmer data, filtering to only approved farmers
+      const productsWithFarmers: ProductWithFarmer[] = productsData
+        .filter(product => farmerMap.has(product.farmer_id))
+        .map(product => ({
+          ...product,
+          farmer: farmerMap.get(product.farmer_id)
+        }));
+
+      setProducts(productsWithFarmers);
       setLoading(false);
     };
 
@@ -103,13 +134,14 @@ const Products = () => {
 
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
+      if (!product.farmer) return false;
       // Use product.state or fall back to farmer's state
-      const productState = product.state || product.farmer_profiles.state;
+      const productState = product.state || product.farmer.state;
       const matchesState = productState === selectedState;
       const matchesCategory = category === 'all' || product.category === category;
       const matchesSearch = searchQuery === '' || 
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.farmer_profiles.farm_name.toLowerCase().includes(searchQuery.toLowerCase());
+        product.farmer.farm_name.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesState && matchesCategory && matchesSearch;
     });
   }, [products, selectedState, category, searchQuery]);
@@ -124,14 +156,14 @@ const Products = () => {
       unit: product.unit,
       category: product.category as ProductCategory,
       image: product.image_url || '/placeholder.svg',
-      farmerId: product.farmer_profiles.id,
-      farmerName: product.farmer_profiles.farm_name,
-      farmName: product.farmer_profiles.farm_name,
-      state: (product.state || product.farmer_profiles.state) as State,
+      farmerId: product.farmer!.id,
+      farmerName: product.farmer!.farm_name,
+      farmName: product.farmer!.farm_name,
+      state: (product.state || product.farmer!.state) as State,
       available: product.available_quantity,
       rating: product.average_rating || 0,
       reviewCount: product.review_count || 0,
-      isVerified: product.farmer_profiles.verification_status === 'approved',
+      isVerified: product.farmer!.verification_status === 'approved',
     }));
   }, [filteredProducts]);
 
