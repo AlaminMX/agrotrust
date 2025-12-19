@@ -5,6 +5,7 @@ import { useCart } from '@/context/CartContext';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 interface ProductData {
   id: string;
@@ -49,7 +50,7 @@ export const JumiaProductCard = ({ product }: JumiaProductCardProps) => {
     e.preventDefault();
     e.stopPropagation();
     // Convert to cart-compatible format
-    addToCart({
+    const success = addToCart({
       id: product.id,
       name: product.name,
       price: product.price,
@@ -61,6 +62,10 @@ export const JumiaProductCard = ({ product }: JumiaProductCardProps) => {
       rating: rating,
       reviewCount: reviewCount,
     } as any);
+    
+    if (success) {
+      toast.success(`${product.name} added to cart`);
+    }
   };
 
   const handleWishlist = (e: React.MouseEvent) => {

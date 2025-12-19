@@ -163,11 +163,13 @@ const ProductDetail = () => {
   const stateLabel = STATES.find(s => s.value === product.state)?.label || product.state;
 
   const handleAddToCart = () => {
-    addToCart(product, quantity);
-    toast({
-      title: "Added to cart",
-      description: `${quantity}x ${product.name} added to your cart`,
-    });
+    const success = addToCart(product, quantity);
+    if (success) {
+      toast({
+        title: "Added to cart",
+        description: `${quantity}x ${product.name} added to your cart`,
+      });
+    }
   };
 
   return (

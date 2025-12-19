@@ -26,7 +26,7 @@ interface SavedAddress {
 const Checkout = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { 
     items, 
     selectedState, 
@@ -222,6 +222,16 @@ const Checkout = () => {
   };
 
   // Auth guard - redirect to login if not authenticated
+  if (authLoading) {
+    return (
+      <Layout>
+        <div className="container py-20 flex justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
+
   if (!user) {
     navigate('/auth');
     return null;
