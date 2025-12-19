@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Leaf, ArrowLeft } from 'lucide-react';
+import { Loader2, Leaf } from 'lucide-react';
 import { z } from 'zod';
 import { PasswordInput } from '@/components/auth/PasswordInput';
 
@@ -19,6 +20,7 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
@@ -56,6 +58,13 @@ export default function Auth() {
         variant: 'destructive',
       });
     } else {
+      // Store remember me preference
+      if (rememberMe) {
+        localStorage.setItem('agrotrust_remember_me', 'true');
+      } else {
+        localStorage.removeItem('agrotrust_remember_me');
+      }
+      
       toast({
         title: 'Welcome back!',
         description: 'You have successfully logged in.',
@@ -124,10 +133,6 @@ export default function Auth() {
           <CardHeader className="text-center">
             <CardTitle>Welcome</CardTitle>
             <CardDescription>Sign in to your account or create a new one</CardDescription>
-            <Link to="/" className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-2">
-              <ArrowLeft className="h-3 w-3" />
-              Continue browsing without signing in
-            </Link>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login" className="w-full">
@@ -157,6 +162,19 @@ export default function Auth() {
                       onChange={(e) => setLoginPassword(e.target.value)}
                       required
                     />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="remember-me" 
+                      checked={rememberMe}
+                      onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                    />
+                    <Label 
+                      htmlFor="remember-me" 
+                      className="text-sm font-normal text-muted-foreground cursor-pointer"
+                    >
+                      Remember me
+                    </Label>
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (

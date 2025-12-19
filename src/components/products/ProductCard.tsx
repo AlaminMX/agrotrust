@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { useCart } from '@/context/CartContext';
 import { formatPrice } from '@/lib/format';
+import { toast } from 'sonner';
 
 interface ProductCardProps {
   product: Product;
@@ -17,7 +18,10 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product);
+    const success = addToCart(product);
+    if (success) {
+      toast.success(`${product.name} added to cart`);
+    }
   };
 
   return (

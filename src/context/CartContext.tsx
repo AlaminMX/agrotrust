@@ -2,15 +2,10 @@ import React, { createContext, useContext, useState, useCallback, useMemo, useEf
 import { CartItem, Product, State } from '@/types';
 import { DELIVERY_FEES } from '@/data/mockData';
 import { useAuth } from '@/hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const STATE_STORAGE_KEY = 'agrotrust_state';
-
-// Helper to get cart storage key for a specific user
-const getCartStorageKey = (userId: string | null) => {
-  return userId ? `agrotrust_cart_${userId}` : null;
-};
 
 interface FarmerGroup {
   farmerId: string;
@@ -32,6 +27,7 @@ interface CartContextType {
   subtotal: number;
   deliveryFee: number;
   total: number;
+  cartLoading: boolean;
   // Multi-farmer support
   itemsByFarmer: FarmerGroup[];
   farmerCount: number;
@@ -40,19 +36,6 @@ interface CartContextType {
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
-
-// Helper to load cart from localStorage for a specific user
-const loadCartFromStorage = (userId: string | null): CartItem[] => {
-  if (!userId) return [];
-  try {
-    const key = getCartStorageKey(userId);
-    if (!key) return [];
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-};
 
 // Helper to load state from localStorage
 const loadStateFromStorage = (): State => {
@@ -64,37 +47,116 @@ const loadStateFromStorage = (): State => {
   }
 };
 
-// Helper to save cart to localStorage for a specific user
-const saveCartToStorage = (userId: string | null, items: CartItem[]) => {
-  if (!userId) return;
-  const key = getCartStorageKey(userId);
-  if (key) {
-    localStorage.setItem(key, JSON.stringify(items));
-  }
-};
-
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
+  const [cartLoading, setCartLoading] = useState(false);
   const [selectedState, setSelectedStateInternal] = useState<State>(() => loadStateFromStorage());
 
-  // Load cart when user changes
+  // Fetch cart items from database when user logs in
   useEffect(() => {
-    if (user?.id) {
-      const userCart = loadCartFromStorage(user.id);
-      setItems(userCart);
-    } else {
-      // Clear cart when user logs out
-      setItems([]);
-    }
-  }, [user?.id]);
+    const fetchCartItems = async () => {
+      if (!user?.id) {
+        setItems([]);
+        return;
+      }
 
-  // Persist cart to localStorage when items change (only if user is logged in)
-  useEffect(() => {
-    if (user?.id) {
-      saveCartToStorage(user.id, items);
+      setCartLoading(true);
+      try {
+        // Fetch cart items with product details
+        const { data: cartData, error } = await supabase
+          .from('cart_items')
+          .select(`
+            id,
+            product_id,
+            quantity,
+            products (
+              id,
+              name,
+              description,
+              price,
+              unit,
+              category,
+              image_url,
+              available_quantity,
+              average_rating,
+              review_count,
+              state,
+              farmer_id
+            )
+          `)
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error('Error fetching cart:', error);
+          return;
+        }
+
+        if (!cartData) {
+          setItems([]);
+          return;
+        }
+
+        // Fetch farmer details for all products
+        const farmerIds = [...new Set(cartData.map(item => (item.products as any)?.farmer_id).filter(Boolean))];
+        
+        let farmersMap: Record<string, any> = {};
+        if (farmerIds.length > 0) {
+          const { data: farmersData } = await supabase
+            .from('farmer_profiles_public')
+            .select('id, farm_name, state, verification_status, user_id')
+            .in('id', farmerIds);
+          
+          if (farmersData) {
+            farmersMap = farmersData.reduce((acc, farmer) => {
+              acc[farmer.id] = farmer;
+              return acc;
+            }, {} as Record<string, any>);
+          }
+        }
+
+        // Transform to CartItem format
+        const transformedItems: CartItem[] = cartData
+          .filter(item => item.products)
+          .map(item => {
+            const prod = item.products as any;
+            const farmer = farmersMap[prod.farmer_id];
+            
+            return {
+              product: {
+                id: prod.id,
+                name: prod.name,
+                description: prod.description || '',
+                price: prod.price,
+                unit: prod.unit,
+                category: prod.category,
+                image: prod.image_url || '/placeholder.svg',
+                farmerId: prod.farmer_id,
+                farmerName: farmer?.farm_name || 'Unknown Farmer',
+                farmName: farmer?.farm_name || 'Unknown Farm',
+                state: (prod.state || farmer?.state || 'abuja') as State,
+                available: prod.available_quantity,
+                isVerified: farmer?.verification_status === 'approved',
+                rating: prod.average_rating || 0,
+                reviewCount: prod.review_count || 0,
+              },
+              quantity: item.quantity,
+            };
+          });
+
+        setItems(transformedItems);
+      } catch (error) {
+        console.error('Error fetching cart:', error);
+      } finally {
+        setCartLoading(false);
+      }
+    };
+
+    // Only fetch when auth is done loading
+    if (!authLoading) {
+      fetchCartItems();
     }
-  }, [items, user?.id]);
+  }, [user?.id, authLoading]);
 
   // Persist state to localStorage
   useEffect(() => {
@@ -119,6 +181,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     }
 
+    // Optimistic update
     setItems(prev => {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
@@ -130,33 +193,98 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return [...prev, { product, quantity }];
     });
+
+    // Sync to database
+    const syncToDb = async () => {
+      try {
+        // Check if item already exists in cart
+        const { data: existing } = await supabase
+          .from('cart_items')
+          .select('id, quantity')
+          .eq('user_id', user.id)
+          .eq('product_id', product.id)
+          .maybeSingle();
+
+        if (existing) {
+          // Update quantity
+          await supabase
+            .from('cart_items')
+            .update({ quantity: existing.quantity + quantity })
+            .eq('id', existing.id);
+        } else {
+          // Insert new item
+          await supabase
+            .from('cart_items')
+            .insert({
+              user_id: user.id,
+              product_id: product.id,
+              quantity: quantity,
+            });
+        }
+      } catch (error) {
+        console.error('Error syncing cart to database:', error);
+      }
+    };
+
+    syncToDb();
     return true;
   }, [user]);
 
   const removeFromCart = useCallback((productId: string) => {
+    // Optimistic update
     setItems(prev => prev.filter(item => item.product.id !== productId));
-  }, []);
+
+    // Sync to database
+    if (user?.id) {
+      supabase
+        .from('cart_items')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('product_id', productId)
+        .then(({ error }) => {
+          if (error) console.error('Error removing from cart:', error);
+        });
+    }
+  }, [user?.id]);
 
   const updateQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(productId);
       return;
     }
+
+    // Optimistic update
     setItems(prev =>
       prev.map(item =>
         item.product.id === productId ? { ...item, quantity } : item
       )
     );
-  }, [removeFromCart]);
+
+    // Sync to database
+    if (user?.id) {
+      supabase
+        .from('cart_items')
+        .update({ quantity })
+        .eq('user_id', user.id)
+        .eq('product_id', productId)
+        .then(({ error }) => {
+          if (error) console.error('Error updating cart quantity:', error);
+        });
+    }
+  }, [removeFromCart, user?.id]);
 
   const clearCart = useCallback(() => {
     setItems([]);
-    // Also clear from storage
+    
+    // Clear from database
     if (user?.id) {
-      const key = getCartStorageKey(user.id);
-      if (key) {
-        localStorage.removeItem(key);
-      }
+      supabase
+        .from('cart_items')
+        .delete()
+        .eq('user_id', user.id)
+        .then(({ error }) => {
+          if (error) console.error('Error clearing cart:', error);
+        });
     }
   }, [user?.id]);
 
@@ -211,6 +339,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         subtotal,
         deliveryFee,
         total,
+        cartLoading,
         itemsByFarmer,
         farmerCount,
         getDeliveryFeePerFarmer,
