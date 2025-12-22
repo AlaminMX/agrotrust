@@ -1,12 +1,24 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/hooks/useAuth';
 import { formatPrice } from '@/lib/format';
 import { STATES } from '@/types';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Shield, Store } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Shield, Store, LogIn } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const Cart = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const {
     items,
     selectedState,
@@ -19,10 +31,21 @@ const Cart = () => {
     farmerCount,
     getDeliveryFeePerFarmer,
     getTotalDeliveryFee,
+    isGuestCart,
   } = useCart();
+  
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
 
   const deliveryFeePerFarmer = getDeliveryFeePerFarmer();
   const totalDeliveryFee = getTotalDeliveryFee();
+
+  const handleProceedToCheckout = () => {
+    if (!user) {
+      setShowLoginDialog(true);
+      return;
+    }
+    navigate('/checkout');
+  };
 
   if (items.length === 0) {
     return (
@@ -49,6 +72,11 @@ const Cart = () => {
           {farmerCount > 1 && (
             <p className="text-muted-foreground mt-1">
               Items from {farmerCount} different farms • Separate orders will be created
+            </p>
+          )}
+          {isGuestCart && (
+            <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+              You're shopping as a guest. Sign in to save your cart and checkout.
             </p>
           )}
         </div>
@@ -193,12 +221,30 @@ const Cart = () => {
               </div>
 
               {/* Checkout Button */}
-              <Link to="/checkout">
-                <Button className="w-full mt-4" size="lg">
-                  Proceed to Checkout
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
+              <Button 
+                className="w-full mt-4" 
+                size="lg"
+                onClick={handleProceedToCheckout}
+              >
+                {user ? (
+                  <>
+                    Proceed to Checkout
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                ) : (
+                  <>
+                    Sign In to Checkout
+                    <LogIn className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+
+              {/* Guest notice */}
+              {!user && (
+                <p className="text-xs text-center text-muted-foreground mt-3">
+                  Your cart will be saved when you sign in
+                </p>
+              )}
 
               {/* Multi-order notice */}
               {farmerCount > 1 && (
@@ -222,6 +268,28 @@ const Cart = () => {
           </div>
         </div>
       </div>
+
+      {/* Login Required Dialog */}
+      <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sign In Required</DialogTitle>
+            <DialogDescription>
+              Please sign in or create an account to complete your purchase. 
+              Don't worry, your cart items will be saved!
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setShowLoginDialog(false)}>
+              Continue Shopping
+            </Button>
+            <Button onClick={() => navigate('/auth')}>
+              <LogIn className="mr-2 h-4 w-4" />
+              Sign In / Register
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };

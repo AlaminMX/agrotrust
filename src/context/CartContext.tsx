@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const STATE_STORAGE_KEY = 'agrotrust_state';
+const GUEST_CART_KEY = 'agrotrust_guest_cart';
 
 interface FarmerGroup {
   farmerId: string;
@@ -33,6 +34,9 @@ interface CartContextType {
   farmerCount: number;
   getDeliveryFeePerFarmer: () => number;
   getTotalDeliveryFee: () => number;
+  // Guest cart support
+  isGuestCart: boolean;
+  mergeGuestCartToUser: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -47,22 +51,63 @@ const loadStateFromStorage = (): State => {
   }
 };
 
+// Helper to load guest cart from localStorage
+const loadGuestCartFromStorage = (): CartItem[] => {
+  try {
+    const stored = localStorage.getItem(GUEST_CART_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+// Helper to save guest cart to localStorage
+const saveGuestCartToStorage = (items: CartItem[]) => {
+  try {
+    localStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
+  } catch (error) {
+    console.error('Error saving guest cart:', error);
+  }
+};
+
+// Helper to clear guest cart from localStorage
+const clearGuestCartFromStorage = () => {
+  try {
+    localStorage.removeItem(GUEST_CART_KEY);
+  } catch (error) {
+    console.error('Error clearing guest cart:', error);
+  }
+};
+
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
   const [cartLoading, setCartLoading] = useState(false);
   const [selectedState, setSelectedStateInternal] = useState<State>(() => loadStateFromStorage());
+  const [isGuestCart, setIsGuestCart] = useState(false);
 
-  // Fetch cart items from database when user logs in
+  // Fetch cart items from database when user logs in, or load from localStorage for guests
   useEffect(() => {
     const fetchCartItems = async () => {
+      // If still loading auth, don't do anything
+      if (authLoading) return;
+
+      // If no user, load guest cart from localStorage
       if (!user?.id) {
-        setItems([]);
+        const guestCart = loadGuestCartFromStorage();
+        setItems(guestCart);
+        setIsGuestCart(true);
         return;
       }
 
+      // User is logged in - fetch from database
+      setIsGuestCart(false);
       setCartLoading(true);
+      
       try {
+        // Check if there's a guest cart to merge
+        const guestCart = loadGuestCartFromStorage();
+        
         // Fetch cart items with product details
         const { data: cartData, error } = await supabase
           .from('cart_items')
@@ -92,13 +137,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        if (!cartData) {
-          setItems([]);
-          return;
-        }
-
         // Fetch farmer details for all products
-        const farmerIds = [...new Set(cartData.map(item => (item.products as any)?.farmer_id).filter(Boolean))];
+        const existingProductIds = cartData?.map(item => (item.products as any)?.id).filter(Boolean) || [];
+        const farmerIds = [...new Set(cartData?.map(item => (item.products as any)?.farmer_id).filter(Boolean) || [])];
         
         let farmersMap: Record<string, any> = {};
         if (farmerIds.length > 0) {
@@ -116,7 +157,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // Transform to CartItem format
-        const transformedItems: CartItem[] = cartData
+        const transformedItems: CartItem[] = (cartData || [])
           .filter(item => item.products)
           .map(item => {
             const prod = item.products as any;
@@ -144,6 +185,42 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
           });
 
+        // Merge guest cart items if any
+        if (guestCart.length > 0) {
+          for (const guestItem of guestCart) {
+            const existingIndex = transformedItems.findIndex(
+              item => item.product.id === guestItem.product.id
+            );
+            
+            if (existingIndex >= 0) {
+              // Update quantity
+              transformedItems[existingIndex].quantity += guestItem.quantity;
+              await supabase
+                .from('cart_items')
+                .update({ quantity: transformedItems[existingIndex].quantity })
+                .eq('user_id', user.id)
+                .eq('product_id', guestItem.product.id);
+            } else {
+              // Add new item
+              await supabase
+                .from('cart_items')
+                .insert({
+                  user_id: user.id,
+                  product_id: guestItem.product.id,
+                  quantity: guestItem.quantity,
+                });
+              transformedItems.push(guestItem);
+            }
+          }
+          
+          // Clear guest cart after merging
+          clearGuestCartFromStorage();
+          
+          if (guestCart.length > 0) {
+            toast.success(`${guestCart.length} item(s) from your guest cart have been added`);
+          }
+        }
+
         setItems(transformedItems);
       } catch (error) {
         console.error('Error fetching cart:', error);
@@ -152,10 +229,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    // Only fetch when auth is done loading
-    if (!authLoading) {
-      fetchCartItems();
-    }
+    fetchCartItems();
   }, [user?.id, authLoading]);
 
   // Persist state to localStorage
@@ -163,25 +237,73 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(STATE_STORAGE_KEY, selectedState);
   }, [selectedState]);
 
+  // Persist guest cart to localStorage
+  useEffect(() => {
+    if (isGuestCart) {
+      saveGuestCartToStorage(items);
+    }
+  }, [items, isGuestCart]);
+
   const setSelectedState = useCallback((state: State) => {
     setSelectedStateInternal(state);
   }, []);
 
-  const addToCart = useCallback((product: Product, quantity = 1): boolean => {
-    // Check if user is logged in
-    if (!user) {
-      toast.error('Please sign in to add items to your cart', {
-        action: {
-          label: 'Sign In',
-          onClick: () => {
-            window.location.href = '/auth';
-          },
-        },
-      });
-      return false;
+  const mergeGuestCartToUser = useCallback(async () => {
+    if (!user?.id) return;
+    
+    const guestCart = loadGuestCartFromStorage();
+    if (guestCart.length === 0) return;
+
+    for (const guestItem of guestCart) {
+      try {
+        const { data: existing } = await supabase
+          .from('cart_items')
+          .select('id, quantity')
+          .eq('user_id', user.id)
+          .eq('product_id', guestItem.product.id)
+          .maybeSingle();
+
+        if (existing) {
+          await supabase
+            .from('cart_items')
+            .update({ quantity: existing.quantity + guestItem.quantity })
+            .eq('id', existing.id);
+        } else {
+          await supabase
+            .from('cart_items')
+            .insert({
+              user_id: user.id,
+              product_id: guestItem.product.id,
+              quantity: guestItem.quantity,
+            });
+        }
+      } catch (error) {
+        console.error('Error merging guest cart item:', error);
+      }
     }
 
-    // Optimistic update
+    clearGuestCartFromStorage();
+  }, [user?.id]);
+
+  const addToCart = useCallback((product: Product, quantity = 1): boolean => {
+    // For guests, add to local state (will be persisted to localStorage)
+    if (!user) {
+      setItems(prev => {
+        const existing = prev.find(item => item.product.id === product.id);
+        if (existing) {
+          return prev.map(item =>
+            item.product.id === product.id
+              ? { ...item, quantity: item.quantity + quantity }
+              : item
+          );
+        }
+        return [...prev, { product, quantity }];
+      });
+      toast.success('Added to cart');
+      return true;
+    }
+
+    // For logged-in users, sync to database
     setItems(prev => {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
@@ -197,7 +319,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Sync to database
     const syncToDb = async () => {
       try {
-        // Check if item already exists in cart
         const { data: existing } = await supabase
           .from('cart_items')
           .select('id, quantity')
@@ -206,13 +327,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .maybeSingle();
 
         if (existing) {
-          // Update quantity
           await supabase
             .from('cart_items')
             .update({ quantity: existing.quantity + quantity })
             .eq('id', existing.id);
         } else {
-          // Insert new item
           await supabase
             .from('cart_items')
             .insert({
@@ -231,10 +350,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   const removeFromCart = useCallback((productId: string) => {
-    // Optimistic update
     setItems(prev => prev.filter(item => item.product.id !== productId));
 
-    // Sync to database
+    // Sync to database if logged in
     if (user?.id) {
       supabase
         .from('cart_items')
@@ -253,14 +371,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // Optimistic update
     setItems(prev =>
       prev.map(item =>
         item.product.id === productId ? { ...item, quantity } : item
       )
     );
 
-    // Sync to database
+    // Sync to database if logged in
     if (user?.id) {
       supabase
         .from('cart_items')
@@ -276,8 +393,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearCart = useCallback(() => {
     setItems([]);
     
-    // Clear from database
     if (user?.id) {
+      // Clear from database
       supabase
         .from('cart_items')
         .delete()
@@ -285,6 +402,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .then(({ error }) => {
           if (error) console.error('Error clearing cart:', error);
         });
+    } else {
+      // Clear guest cart from localStorage
+      clearGuestCartFromStorage();
     }
   }, [user?.id]);
 
@@ -344,6 +464,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         farmerCount,
         getDeliveryFeePerFarmer,
         getTotalDeliveryFee,
+        isGuestCart,
+        mergeGuestCartToUser,
       }}
     >
       {children}

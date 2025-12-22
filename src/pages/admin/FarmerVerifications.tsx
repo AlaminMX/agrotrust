@@ -23,6 +23,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { 
   CheckCircle, 
   XCircle, 
@@ -32,7 +34,8 @@ import {
   Calendar,
   Loader2,
   Trash2,
-  UserX
+  UserX,
+  Package
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -298,6 +301,30 @@ export default function FarmerVerifications() {
     }
   };
 
+  const handleTogglePickup = async (farmerId: string, currentValue: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('farmer_profiles')
+        .update({ allows_pickup: !currentValue })
+        .eq('id', farmerId);
+
+      if (error) throw error;
+
+      // Update local state
+      setFarmers(prev => prev.map(f => 
+        f.id === farmerId ? { ...f, allows_pickup: !currentValue } : f
+      ));
+      
+      if (selectedFarmer?.id === farmerId) {
+        setSelectedFarmer(prev => prev ? { ...prev, allows_pickup: !currentValue } : null);
+      }
+
+      toast.success(`Pickup ${!currentValue ? 'enabled' : 'disabled'} for this farmer`);
+    } catch (error: any) {
+      toast.error('Failed to update pickup setting: ' + error.message);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
       pending: { variant: 'secondary', label: 'Pending' },
@@ -507,6 +534,34 @@ export default function FarmerVerifications() {
                       <p><span className="text-muted-foreground">Account Name:</span> {selectedFarmer.bank_account_name}</p>
                       <p><span className="text-muted-foreground">Account Number:</span> {selectedFarmer.bank_account_number}</p>
                     </div>
+                  </div>
+                )}
+
+                {/* Pickup Settings */}
+                {selectedFarmer.verification_status === 'approved' && (
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-5 w-5 text-primary" />
+                        <div>
+                          <Label htmlFor="allows-pickup" className="font-medium">Allow Customer Pickup</Label>
+                          <p className="text-xs text-muted-foreground">
+                            Customers can pick up orders from this farmer's location
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        id="allows-pickup"
+                        checked={selectedFarmer.allows_pickup || false}
+                        onCheckedChange={() => handleTogglePickup(selectedFarmer.id, selectedFarmer.allows_pickup || false)}
+                      />
+                    </div>
+                    {selectedFarmer.allows_pickup && selectedFarmer.address && (
+                      <div className="mt-3 p-2 bg-background rounded border">
+                        <p className="text-xs text-muted-foreground">Pickup Address:</p>
+                        <p className="text-sm">{selectedFarmer.address}</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
