@@ -142,10 +142,7 @@ export default function AdminPayouts() {
   const completedPayouts = payouts.filter(p => p.status === 'completed');
   const totalPending = pendingPayouts.reduce((sum, p) => sum + (p.farmer_payout || p.amount), 0);
   const totalAwaitingPayout = awaitingPayoutOrders.reduce((sum, p) => sum + (p.farmer_payout || p.amount), 0);
-  const totalPlatformFees = payouts.filter(p => p.status === 'completed').reduce((sum, p) => sum + (p.platform_fee || 0), 0);
-  const completedPayouts = payouts.filter(p => p.status === 'completed');
-  const totalPending = pendingPayouts.reduce((sum, p) => sum + (p.farmer_payout || p.amount), 0);
-  const totalPlatformFees = payouts.filter(p => p.status === 'completed').reduce((sum, p) => sum + (p.platform_fee || 0), 0);
+  const totalPlatformFees = completedPayouts.reduce((sum, p) => sum + (p.platform_fee || 0), 0);
 
   const filteredPayouts = payouts.filter(payout =>
     payout.farmer_profiles?.farm_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
