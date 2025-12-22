@@ -49,6 +49,61 @@ export type Database = {
           },
         ]
       }
+      consumer_reviews: {
+        Row: {
+          comment: string | null
+          consumer_id: string
+          created_at: string
+          farmer_id: string
+          id: string
+          order_id: string
+          rating: number
+          updated_at: string
+        }
+        Insert: {
+          comment?: string | null
+          consumer_id: string
+          created_at?: string
+          farmer_id: string
+          id?: string
+          order_id: string
+          rating: number
+          updated_at?: string
+        }
+        Update: {
+          comment?: string | null
+          consumer_id?: string
+          created_at?: string
+          farmer_id?: string
+          id?: string
+          order_id?: string
+          rating?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consumer_reviews_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumer_reviews_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumer_reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_addresses: {
         Row: {
           address: string
@@ -631,6 +686,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          average_rating: number | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -639,11 +695,13 @@ export type Database = {
           phone: string | null
           preferred_state: string | null
           produce_interests: string[] | null
+          review_count: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
+          average_rating?: number | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -652,11 +710,13 @@ export type Database = {
           phone?: string | null
           preferred_state?: string | null
           produce_interests?: string[] | null
+          review_count?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
           avatar_url?: string | null
+          average_rating?: number | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -665,6 +725,7 @@ export type Database = {
           phone?: string | null
           preferred_state?: string | null
           produce_interests?: string[] | null
+          review_count?: number | null
           updated_at?: string
           user_id?: string
         }

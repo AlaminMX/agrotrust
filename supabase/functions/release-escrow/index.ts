@@ -33,33 +33,48 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
+    // ADMIN CHECK: Verify user has admin role
+    const { data: adminRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
+
+    if (roleError || !adminRole) {
+      console.error('User is not an admin:', user.id);
+      throw new Error('Unauthorized: Admin access required');
+    }
+
+    console.log(`Admin ${user.id} is releasing escrow`);
+
     const { orderId } = await req.json();
     
     if (!orderId) {
       throw new Error('Order ID is required');
     }
 
-    console.log(`Processing escrow release for order: ${orderId}, user: ${user.id}`);
+    console.log(`Processing escrow release for order: ${orderId}, admin: ${user.id}`);
 
-    // Verify the order belongs to this consumer
+    // Get the order (admin can access any order)
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('*')
       .eq('id', orderId)
-      .eq('consumer_id', user.id)
       .single();
 
     if (orderError || !order) {
-      console.error('Order not found or not owned by user:', orderError);
-      throw new Error('Order not found or access denied');
+      console.error('Order not found:', orderError);
+      throw new Error('Order not found');
     }
 
     if (order.escrow_released) {
       throw new Error('Escrow already released for this order');
     }
 
-    if (!['out_for_delivery', 'delivered'].includes(order.status)) {
-      throw new Error('Order must be delivered before confirming receipt');
+    // Order must be in awaiting_payout or delivered status
+    if (!['awaiting_payout', 'delivered', 'out_for_delivery'].includes(order.status)) {
+      throw new Error('Order must be awaiting payout or delivered before releasing escrow');
     }
 
     // Calculate commission: 10% platform, 90% farmer
@@ -81,7 +96,7 @@ serve(async (req) => {
       throw new Error('Farmer profile not found');
     }
 
-    // Update order status
+    // Update order status to confirmed
     const { error: updateError } = await supabase
       .from('orders')
       .update({
@@ -103,27 +118,42 @@ serve(async (req) => {
       .insert({
         order_id: orderId,
         status: 'confirmed',
-        description: 'Delivery confirmed by customer. Payment being processed for farmer.',
+        description: 'Payout released by admin. Payment being processed for farmer.',
       });
 
     // Generate payout reference
     const payoutReference = `TRF-${orderId.substring(0, 8)}-${Date.now()}`;
 
-    // Create payout entry with commission breakdown
-    const { error: payoutError } = await supabase
+    // Update existing payout or create new one
+    const { data: existingPayout } = await supabase
       .from('payouts')
-      .insert({
-        farmer_id: order.farmer_id,
-        order_id: orderId,
-        amount: subtotal,
-        platform_fee: platformFee,
-        farmer_payout: farmerPayout,
-        payout_reference: payoutReference,
-        status: farmer.paystack_recipient_code ? 'processing' : 'pending',
-      });
+      .select('id')
+      .eq('order_id', orderId)
+      .maybeSingle();
 
-    if (payoutError) {
-      console.error('Error creating payout:', payoutError);
+    if (existingPayout) {
+      // Update existing payout
+      await supabase
+        .from('payouts')
+        .update({
+          status: farmer.paystack_recipient_code ? 'processing' : 'completed',
+          payout_reference: payoutReference,
+          processed_at: new Date().toISOString(),
+        })
+        .eq('id', existingPayout.id);
+    } else {
+      // Create new payout entry
+      await supabase
+        .from('payouts')
+        .insert({
+          farmer_id: order.farmer_id,
+          order_id: orderId,
+          amount: subtotal,
+          platform_fee: platformFee,
+          farmer_payout: farmerPayout,
+          payout_reference: payoutReference,
+          status: farmer.paystack_recipient_code ? 'processing' : 'completed',
+        });
     }
 
     // Attempt automatic transfer if farmer has recipient code
@@ -165,14 +195,15 @@ serve(async (req) => {
         console.error('Transfer error:', transferError);
       }
     } else {
-      console.log('No recipient code found or Paystack not configured - payout marked as pending for manual processing');
+      console.log('No recipient code found or Paystack not configured - payout marked as completed for manual processing');
     }
 
-    // Update farmer's pending payout balance
+    // Update farmer's earnings
     await supabase
       .from('farmer_profiles')
       .update({
-        pending_payout: (farmer.pending_payout || 0) + farmerPayout,
+        pending_payout: Math.max(0, (farmer.pending_payout || 0) - farmerPayout),
+        total_earnings: (farmer.total_earnings || 0) + farmerPayout,
       })
       .eq('id', order.farmer_id);
 
@@ -202,14 +233,14 @@ serve(async (req) => {
       console.error('Error sending payout notification:', emailError);
     }
 
-    console.log(`Escrow released successfully for order: ${orderId}`);
+    console.log(`Escrow released successfully for order: ${orderId} by admin: ${user.id}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: transferInitiated 
-          ? 'Delivery confirmed! Payment is being transferred to the farmer.' 
-          : 'Delivery confirmed! Payment will be processed for the farmer.',
+          ? 'Payout released! Payment is being transferred to the farmer.' 
+          : 'Payout released! Payment has been processed for the farmer.',
         platformFee,
         farmerPayout,
         transferInitiated,
