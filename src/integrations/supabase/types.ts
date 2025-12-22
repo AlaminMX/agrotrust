@@ -52,6 +52,7 @@ export type Database = {
       delivery_addresses: {
         Row: {
           address: string
+          area_id: string | null
           city: string
           created_at: string
           full_name: string
@@ -65,6 +66,7 @@ export type Database = {
         }
         Insert: {
           address: string
+          area_id?: string | null
           city: string
           created_at?: string
           full_name: string
@@ -78,6 +80,7 @@ export type Database = {
         }
         Update: {
           address?: string
+          area_id?: string | null
           city?: string
           created_at?: string
           full_name?: string
@@ -89,11 +92,134 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_addresses_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_areas: {
+        Row: {
+          area_name: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          state: string
+          updated_at: string | null
+          zone_id: string | null
+        }
+        Insert: {
+          area_name: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          state?: string
+          updated_at?: string | null
+          zone_id?: string | null
+        }
+        Update: {
+          area_name?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          state?: string
+          updated_at?: string | null
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_areas_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_pricing: {
+        Row: {
+          created_at: string | null
+          from_zone_id: string | null
+          id: string
+          is_active: boolean | null
+          price: number
+          to_zone_id: string | null
+          updated_at: string | null
+          weight_category: string
+        }
+        Insert: {
+          created_at?: string | null
+          from_zone_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          price?: number
+          to_zone_id?: string | null
+          updated_at?: string | null
+          weight_category: string
+        }
+        Update: {
+          created_at?: string | null
+          from_zone_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          price?: number
+          to_zone_id?: string | null
+          updated_at?: string | null
+          weight_category?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_pricing_from_zone_id_fkey"
+            columns: ["from_zone_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_zones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_pricing_to_zone_id_fkey"
+            columns: ["to_zone_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_zones: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          updated_at: string | null
+          zone_code: string
+          zone_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+          zone_code: string
+          zone_name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+          zone_code?: string
+          zone_name?: string
+        }
         Relationships: []
       }
       farmer_profiles: {
         Row: {
           address: string | null
+          allows_pickup: boolean | null
+          area_id: string | null
           bank_account_name: string | null
           bank_account_number: string | null
           bank_name: string | null
@@ -118,6 +244,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          allows_pickup?: boolean | null
+          area_id?: string | null
           bank_account_name?: string | null
           bank_account_number?: string | null
           bank_name?: string | null
@@ -142,6 +270,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          allows_pickup?: boolean | null
+          area_id?: string | null
           bank_account_name?: string | null
           bank_account_number?: string | null
           bank_name?: string | null
@@ -164,7 +294,15 @@ export type Database = {
           verification_status?: Database["public"]["Enums"]["verification_status"]
           verified_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "farmer_profiles_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_areas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_items: {
         Row: {
@@ -248,6 +386,8 @@ export type Database = {
       }
       orders: {
         Row: {
+          admin_approved_at: string | null
+          admin_rejected_at: string | null
           confirmed_at: string | null
           consumer_email: string | null
           consumer_id: string | null
@@ -257,6 +397,7 @@ export type Database = {
           delivered_at: string | null
           delivery_address: string
           delivery_fee: number
+          delivery_method: string | null
           delivery_state: string
           escrow_released: boolean
           escrow_released_at: string | null
@@ -265,12 +406,17 @@ export type Database = {
           id: string
           order_number: string
           payment_reference: string | null
+          refund_reference: string | null
+          refund_status: string | null
+          rejection_reason: string | null
           status: Database["public"]["Enums"]["order_status"]
           subtotal: number
           total_amount: number
           updated_at: string
         }
         Insert: {
+          admin_approved_at?: string | null
+          admin_rejected_at?: string | null
           confirmed_at?: string | null
           consumer_email?: string | null
           consumer_id?: string | null
@@ -280,6 +426,7 @@ export type Database = {
           delivered_at?: string | null
           delivery_address: string
           delivery_fee?: number
+          delivery_method?: string | null
           delivery_state: string
           escrow_released?: boolean
           escrow_released_at?: string | null
@@ -288,12 +435,17 @@ export type Database = {
           id?: string
           order_number: string
           payment_reference?: string | null
+          refund_reference?: string | null
+          refund_status?: string | null
+          rejection_reason?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal: number
           total_amount: number
           updated_at?: string
         }
         Update: {
+          admin_approved_at?: string | null
+          admin_rejected_at?: string | null
           confirmed_at?: string | null
           consumer_email?: string | null
           consumer_id?: string | null
@@ -303,6 +455,7 @@ export type Database = {
           delivered_at?: string | null
           delivery_address?: string
           delivery_fee?: number
+          delivery_method?: string | null
           delivery_state?: string
           escrow_released?: boolean
           escrow_released_at?: string | null
@@ -311,6 +464,9 @@ export type Database = {
           id?: string
           order_number?: string
           payment_reference?: string | null
+          refund_reference?: string | null
+          refund_status?: string | null
+          rejection_reason?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number
           total_amount?: number
@@ -413,6 +569,7 @@ export type Database = {
           state: string | null
           unit: string
           updated_at: string
+          weight_kg: number | null
         }
         Insert: {
           available_quantity?: number
@@ -432,6 +589,7 @@ export type Database = {
           state?: string | null
           unit?: string
           updated_at?: string
+          weight_kg?: number | null
         }
         Update: {
           available_quantity?: number
@@ -451,6 +609,7 @@ export type Database = {
           state?: string | null
           unit?: string
           updated_at?: string
+          weight_kg?: number | null
         }
         Relationships: [
           {
@@ -655,10 +814,13 @@ export type Database = {
       order_status:
         | "pending"
         | "paid"
+        | "approved"
+        | "rejected"
         | "processing"
         | "dispatched"
         | "out_for_delivery"
         | "delivered"
+        | "awaiting_payout"
         | "confirmed"
         | "disputed"
       verification_status: "pending" | "under_review" | "approved" | "rejected"
@@ -793,10 +955,13 @@ export const Constants = {
       order_status: [
         "pending",
         "paid",
+        "approved",
+        "rejected",
         "processing",
         "dispatched",
         "out_for_delivery",
         "delivered",
+        "awaiting_payout",
         "confirmed",
         "disputed",
       ],

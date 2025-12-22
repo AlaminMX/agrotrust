@@ -137,7 +137,12 @@ export default function AdminPayouts() {
     }).format(new Date(dateString));
   };
 
+  const awaitingPayoutOrders = payouts.filter(p => p.status === 'awaiting_payout');
   const pendingPayouts = payouts.filter(p => p.status === 'pending' || p.status === 'processing');
+  const completedPayouts = payouts.filter(p => p.status === 'completed');
+  const totalPending = pendingPayouts.reduce((sum, p) => sum + (p.farmer_payout || p.amount), 0);
+  const totalAwaitingPayout = awaitingPayoutOrders.reduce((sum, p) => sum + (p.farmer_payout || p.amount), 0);
+  const totalPlatformFees = payouts.filter(p => p.status === 'completed').reduce((sum, p) => sum + (p.platform_fee || 0), 0);
   const completedPayouts = payouts.filter(p => p.status === 'completed');
   const totalPending = pendingPayouts.reduce((sum, p) => sum + (p.farmer_payout || p.amount), 0);
   const totalPlatformFees = payouts.filter(p => p.status === 'completed').reduce((sum, p) => sum + (p.platform_fee || 0), 0);
@@ -173,7 +178,16 @@ export default function AdminPayouts() {
 
       <main className="container mx-auto px-4 py-8">
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+          <Card className="border-2 border-amber-500 bg-amber-50 dark:bg-amber-950">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-amber-700 dark:text-amber-300">Awaiting Payout</CardDescription>
+              <CardTitle className="text-2xl text-amber-700 dark:text-amber-300">{formatPrice(totalAwaitingPayout)}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-amber-600 dark:text-amber-400">{awaitingPayoutOrders.length} orders ready</p>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Pending Payouts</CardDescription>
