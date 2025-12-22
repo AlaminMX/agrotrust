@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Leaf, Mail, Phone, MapPin, BadgeCheck, LayoutDashboard } from 'lucide-react';
+import { Leaf, Mail, Phone, MapPin, BadgeCheck, LayoutDashboard, MessageCircle } from 'lucide-react';
 
 export const Footer = () => {
   return (
@@ -79,11 +79,19 @@ export const Footer = () => {
           <div className="space-y-4">
             <h4 className="font-semibold text-foreground">Contact</h4>
             <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-              <a href="mailto:support@agrotrust.ng" className="flex items-center gap-2 hover:text-primary transition-colors">
-                <Mail className="h-4 w-4" /> support@agrotrust.ng
+              <a href="mailto:nexelwebdev@gmail.com" className="flex items-center gap-2 hover:text-primary transition-colors">
+                <Mail className="h-4 w-4" /> nexelwebdev@gmail.com
               </a>
-              <a href="tel:+2348001234567" className="flex items-center gap-2 hover:text-primary transition-colors">
-                <Phone className="h-4 w-4" /> +234 800 123 4567
+              <a href="tel:+2348091994767" className="flex items-center gap-2 hover:text-primary transition-colors">
+                <Phone className="h-4 w-4" /> 08091994767
+              </a>
+              <a 
+                href="https://wa.me/2348091994767" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 hover:text-primary transition-colors"
+              >
+                <MessageCircle className="h-4 w-4" /> WhatsApp Us
               </a>
             </div>
           </div>

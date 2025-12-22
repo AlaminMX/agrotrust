@@ -57,10 +57,11 @@ const statusIcons: Record<string, any> = {
   dispatched: Truck,
   out_for_delivery: MapPin,
   delivered: CheckCircle2,
+  awaiting_payout: Clock,
   confirmed: Check,
 };
 
-const statusOrder = ['pending', 'paid', 'processing', 'dispatched', 'out_for_delivery', 'delivered', 'confirmed'];
+const statusOrder = ['pending', 'paid', 'processing', 'dispatched', 'out_for_delivery', 'delivered', 'awaiting_payout', 'confirmed'];
 
 const OrderTracking = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -126,7 +127,7 @@ const OrderTracking = () => {
     
     setConfirming(true);
     try {
-      const { data, error } = await supabase.functions.invoke('release-escrow', {
+      const { data, error } = await supabase.functions.invoke('confirm-delivery', {
         body: { orderId: order.id }
       });
 
@@ -135,7 +136,7 @@ const OrderTracking = () => {
 
       toast({
         title: 'Delivery Confirmed!',
-        description: 'Payment has been released to the farmer. Thank you!',
+        description: 'The admin will process your payment to the farmer soon. Thank you!',
       });
 
       // Reload order to show updated status
@@ -188,7 +189,8 @@ const OrderTracking = () => {
       dispatched: 'Package picked up by delivery partner',
       out_for_delivery: 'Out for delivery to your location',
       delivered: 'Package delivered',
-      confirmed: 'Delivery confirmed, payment released',
+      awaiting_payout: 'Delivery confirmed, awaiting payout release',
+      confirmed: 'Payment released to farmer',
     };
     return descriptions[status] || 'Status update';
   };
@@ -217,7 +219,7 @@ const OrderTracking = () => {
   }
 
   const timeline = buildTimeline();
-  const canConfirmDelivery = ['out_for_delivery', 'delivered'].includes(order.status) && !order.escrow_released;
+  const canConfirmDelivery = ['out_for_delivery', 'delivered'].includes(order.status) && !order.escrow_released && order.status !== 'awaiting_payout';
 
   return (
     <Layout>
