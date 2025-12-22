@@ -40,6 +40,7 @@ export default function EditProduct() {
   const [unit, setUnit] = useState('kg');
   const [category, setCategory] = useState('');
   const [availableQuantity, setAvailableQuantity] = useState('');
+  const [weightKg, setWeightKg] = useState('1');
   const [isActive, setIsActive] = useState(true);
   const [productImage, setProductImage] = useState<File | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
@@ -75,6 +76,7 @@ export default function EditProduct() {
     setUnit(data.unit);
     setCategory(data.category);
     setAvailableQuantity(data.available_quantity.toString());
+    setWeightKg(data.weight_kg?.toString() || '1');
     setIsActive(data.is_active);
     setCurrentImageUrl(data.image_url);
     setLoading(false);
@@ -126,6 +128,7 @@ export default function EditProduct() {
           unit,
           category,
           available_quantity: parseInt(availableQuantity),
+          weight_kg: parseFloat(weightKg) || 1,
           image_url: imageUrl,
           is_active: isActive,
         })
@@ -331,17 +334,34 @@ export default function EditProduct() {
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Available Quantity *</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="0"
-                  placeholder="e.g., 100"
-                  value={availableQuantity}
-                  onChange={(e) => setAvailableQuantity(e.target.value)}
-                  required
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Available Quantity *</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="0"
+                    placeholder="e.g., 100"
+                    value={availableQuantity}
+                    onChange={(e) => setAvailableQuantity(e.target.value)}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="weight">Weight per Unit (kg) *</Label>
+                  <Input
+                    id="weight"
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    placeholder="e.g., 1.5"
+                    value={weightKg}
+                    onChange={(e) => setWeightKg(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">Used for delivery fee calculation</p>
+                </div>
               </div>
               
               <div className="space-y-3">
