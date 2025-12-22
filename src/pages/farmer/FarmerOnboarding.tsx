@@ -58,6 +58,8 @@ export default function FarmerOnboarding() {
   const [farmName, setFarmName] = useState('');
   const [farmDescription, setFarmDescription] = useState('');
   const [state, setState] = useState('');
+  const [areaId, setAreaId] = useState('');
+  const [areas, setAreas] = useState<Array<{ id: string; area_name: string }>>([]);
   const [address, setAddress] = useState('');
   const [farmSize, setFarmSize] = useState('');
   const [produceTypes, setProduceTypes] = useState<string[]>([]);
@@ -83,6 +85,29 @@ export default function FarmerOnboarding() {
       checkExistingProfile();
     }
   }, [user]);
+
+  // Load areas when state is Abuja
+  useEffect(() => {
+    if (state === 'abuja') {
+      loadAreas();
+    } else {
+      setAreas([]);
+      setAreaId('');
+    }
+  }, [state]);
+
+  const loadAreas = async () => {
+    const { data } = await supabase
+      .from('delivery_areas')
+      .select('id, area_name')
+      .eq('state', 'abuja')
+      .eq('is_active', true)
+      .order('area_name');
+    
+    if (data) {
+      setAreas(data);
+    }
+  };
 
   const checkExistingProfile = async () => {
     const { data } = await supabase
@@ -194,6 +219,7 @@ export default function FarmerOnboarding() {
           farm_name: farmName,
           farm_description: farmDescription,
           state: state,
+          area_id: areaId || null,
           address: address,
           farm_size: farmSize,
           produce_types: produceTypes,
@@ -358,7 +384,7 @@ export default function FarmerOnboarding() {
                       <SelectTrigger>
                         <SelectValue placeholder="Select state" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-background border z-50">
                         {STATES.map((s) => (
                           <SelectItem key={s.value} value={s.value}>
                             {s.label}
@@ -374,7 +400,7 @@ export default function FarmerOnboarding() {
                       <SelectTrigger>
                         <SelectValue placeholder="Select size" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-background border z-50">
                         <SelectItem value="small">Small (&lt; 1 hectare)</SelectItem>
                         <SelectItem value="medium">Medium (1-5 hectares)</SelectItem>
                         <SelectItem value="large">Large (5-20 hectares)</SelectItem>
@@ -383,6 +409,26 @@ export default function FarmerOnboarding() {
                     </Select>
                   </div>
                 </div>
+
+                {/* Area selection for Abuja */}
+                {state === 'abuja' && areas.length > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="area">Delivery Area *</Label>
+                    <Select value={areaId} onValueChange={setAreaId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your area" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border z-50 max-h-60">
+                        {areas.map((area) => (
+                          <SelectItem key={area.id} value={area.id}>
+                            {area.area_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">This helps calculate accurate delivery fees</p>
+                  </div>
+                )}
                 
                 <div className="space-y-2">
                   <Label htmlFor="address">Farm Address *</Label>
@@ -417,7 +463,7 @@ export default function FarmerOnboarding() {
                 <div className="flex justify-end pt-4">
                   <Button 
                     onClick={() => setStep('bank')}
-                    disabled={!farmName || !state || !address || produceTypes.length === 0}
+                    disabled={!farmName || !state || !address || produceTypes.length === 0 || (state === 'abuja' && !areaId)}
                   >
                     Continue <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>

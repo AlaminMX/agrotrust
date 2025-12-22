@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPrice } from '@/lib/format';
 import { STATES } from '@/types';
-import { Shield, CreditCard, Loader2, MapPin, Check, Store } from 'lucide-react';
+import { Shield, CreditCard, Loader2, MapPin, Check, Store, Truck, Package, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -21,6 +23,15 @@ interface SavedAddress {
   city: string;
   state: string;
   is_default: boolean;
+}
+
+interface FarmerInfo {
+  id: string;
+  farm_name: string;
+  allows_pickup: boolean;
+  address: string | null;
+  state: string;
+  phone?: string;
 }
 
 const Checkout = () => {
@@ -42,6 +53,8 @@ const Checkout = () => {
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [useNewAddress, setUseNewAddress] = useState(false);
+  const [farmerInfoMap, setFarmerInfoMap] = useState<Record<string, FarmerInfo>>({});
+  const [deliveryMethods, setDeliveryMethods] = useState<Record<string, 'delivery' | 'pickup'>>({});
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -52,14 +65,74 @@ const Checkout = () => {
 
   const stateLabel = STATES.find(s => s.value === selectedState)?.label || selectedState;
   const deliveryFeePerFarmer = getDeliveryFeePerFarmer();
-  const totalDeliveryFee = getTotalDeliveryFee();
 
-  // Fetch saved addresses
+  // Calculate total delivery fee considering pickup selections
+  const calculateTotalDeliveryFee = () => {
+    let total = 0;
+    for (const group of itemsByFarmer) {
+      if (deliveryMethods[group.farmerId] !== 'pickup') {
+        total += deliveryFeePerFarmer;
+      }
+    }
+    return total;
+  };
+
+  const totalDeliveryFee = calculateTotalDeliveryFee();
+  const adjustedTotal = subtotal + totalDeliveryFee;
+
+  // Fetch saved addresses and farmer info
   useEffect(() => {
     if (user) {
       fetchAddresses();
+      fetchFarmerInfo();
     }
-  }, [user]);
+  }, [user, itemsByFarmer]);
+
+  // Initialize delivery methods to 'delivery' for all farmers
+  useEffect(() => {
+    const methods: Record<string, 'delivery' | 'pickup'> = {};
+    itemsByFarmer.forEach(group => {
+      if (!deliveryMethods[group.farmerId]) {
+        methods[group.farmerId] = 'delivery';
+      }
+    });
+    if (Object.keys(methods).length > 0) {
+      setDeliveryMethods(prev => ({ ...prev, ...methods }));
+    }
+  }, [itemsByFarmer]);
+
+  const fetchFarmerInfo = async () => {
+    const farmerIds = itemsByFarmer.map(g => g.farmerId);
+    if (farmerIds.length === 0) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('farmer_profiles')
+        .select('id, farm_name, allows_pickup, address, state')
+        .in('id', farmerIds);
+
+      if (error) throw error;
+
+      // Also get farmer phone numbers from profiles
+      const userIds = data?.map(f => f.id) || [];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, phone')
+        .in('user_id', userIds);
+
+      const infoMap: Record<string, FarmerInfo> = {};
+      data?.forEach(farmer => {
+        const profile = profilesData?.find(p => p.user_id === farmer.id);
+        infoMap[farmer.id] = {
+          ...farmer,
+          phone: profile?.phone || undefined,
+        };
+      });
+      setFarmerInfoMap(infoMap);
+    } catch (error) {
+      console.error('Error fetching farmer info:', error);
+    }
+  };
 
   const fetchAddresses = async () => {
     try {
@@ -95,36 +168,50 @@ const Checkout = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if any orders need delivery - if so, validate address
+    const needsDelivery = itemsByFarmer.some(g => deliveryMethods[g.farmerId] !== 'pickup');
+    
     let deliveryInfo: { fullName: string; email: string; phone: string; address: string; city: string };
     
-    if (useNewAddress || savedAddresses.length === 0) {
-      // Validate new address form
-      if (!formData.fullName || !formData.email || !formData.phone || !formData.address || !formData.city) {
-        toast({
-          title: "Missing information",
-          description: "Please fill in all required fields",
-          variant: "destructive",
-        });
-        return;
+    if (needsDelivery) {
+      if (useNewAddress || savedAddresses.length === 0) {
+        // Validate new address form
+        if (!formData.fullName || !formData.email || !formData.phone || !formData.address || !formData.city) {
+          toast({
+            title: "Missing information",
+            description: "Please fill in all required fields",
+            variant: "destructive",
+          });
+          return;
+        }
+        deliveryInfo = formData;
+      } else {
+        // Use selected saved address
+        const selectedAddr = savedAddresses.find(a => a.id === selectedAddressId);
+        if (!selectedAddr) {
+          toast({
+            title: "No address selected",
+            description: "Please select a delivery address",
+            variant: "destructive",
+          });
+          return;
+        }
+        deliveryInfo = {
+          fullName: selectedAddr.full_name,
+          email: user?.email || '',
+          phone: selectedAddr.phone,
+          address: selectedAddr.address,
+          city: selectedAddr.city,
+        };
       }
-      deliveryInfo = formData;
     } else {
-      // Use selected saved address
-      const selectedAddr = savedAddresses.find(a => a.id === selectedAddressId);
-      if (!selectedAddr) {
-        toast({
-          title: "No address selected",
-          description: "Please select a delivery address",
-          variant: "destructive",
-        });
-        return;
-      }
+      // All orders are pickup - use minimal info
       deliveryInfo = {
-        fullName: selectedAddr.full_name,
+        fullName: formData.fullName || user?.email?.split('@')[0] || 'Customer',
         email: user?.email || '',
-        phone: selectedAddr.phone,
-        address: selectedAddr.address,
-        city: selectedAddr.city,
+        phone: formData.phone || '',
+        address: 'Pickup',
+        city: 'Pickup',
       };
     }
 
@@ -139,8 +226,16 @@ const Checkout = () => {
         // Generate order number
         const orderNumber = `AGT-${Date.now().toString(36).toUpperCase()}-${group.farmerId.substring(0, 4).toUpperCase()}`;
         
-        const orderTotal = group.subtotal + deliveryFeePerFarmer;
+        const isPickup = deliveryMethods[group.farmerId] === 'pickup';
+        const orderDeliveryFee = isPickup ? 0 : deliveryFeePerFarmer;
+        const orderTotal = group.subtotal + orderDeliveryFee;
         totalAmountForPayment += orderTotal;
+
+        // For pickup orders, use farmer's address
+        const farmerInfo = farmerInfoMap[group.farmerId];
+        const orderAddress = isPickup 
+          ? `Pickup from: ${farmerInfo?.address || 'Contact farmer for pickup location'}`
+          : `${deliveryInfo.address}, ${deliveryInfo.city}`;
 
         // Create order in database
         const { data: order, error: orderError } = await supabase
@@ -151,12 +246,13 @@ const Checkout = () => {
             consumer_name: deliveryInfo.fullName,
             consumer_email: deliveryInfo.email,
             consumer_phone: deliveryInfo.phone,
-            delivery_address: `${deliveryInfo.address}, ${deliveryInfo.city}`,
+            delivery_address: orderAddress,
             delivery_state: selectedState,
             subtotal: group.subtotal,
-            delivery_fee: deliveryFeePerFarmer,
+            delivery_fee: orderDeliveryFee,
             total_amount: orderTotal,
             farmer_id: group.farmerId,
+            delivery_method: isPickup ? 'pickup' : 'delivery',
             status: 'pending',
           })
           .select()
@@ -194,7 +290,7 @@ const Checkout = () => {
       const { data: paymentData, error: paymentError } = await supabase.functions.invoke('paystack-initialize', {
         body: {
           email: deliveryInfo.email,
-          amount: total,
+          amount: adjustedTotal,
           callback_url: `${window.location.origin}/payment/callback`,
           metadata: {
             order_ids: orderIds,
@@ -434,36 +530,91 @@ const Checkout = () => {
 
                 {/* Orders by Farmer */}
                 <div className="space-y-4 mb-4">
-                  {itemsByFarmer.map((group) => (
-                    <div key={group.farmerId} className="border border-border rounded-lg p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Store className="h-4 w-4 text-primary" />
-                        <span className="font-medium text-sm">{group.farmName}</span>
-                      </div>
-                      <div className="space-y-1">
-                        {group.items.map(({ product, quantity }) => (
-                          <div key={product.id} className="flex justify-between text-sm">
-                            <span className="text-muted-foreground truncate mr-2">
-                              {product.name} × {quantity}
-                            </span>
-                            <span className="text-foreground">{formatPrice(product.price * quantity)}</span>
+                  {itemsByFarmer.map((group) => {
+                    const farmerInfo = farmerInfoMap[group.farmerId];
+                    const isPickup = deliveryMethods[group.farmerId] === 'pickup';
+                    const orderDeliveryFee = isPickup ? 0 : deliveryFeePerFarmer;
+                    
+                    return (
+                      <div key={group.farmerId} className="border border-border rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Store className="h-4 w-4 text-primary" />
+                          <span className="font-medium text-sm">{group.farmName}</span>
+                        </div>
+                        
+                        {/* Pickup Option */}
+                        {farmerInfo?.allows_pickup && (
+                          <div className="mb-3 p-3 bg-muted/50 rounded-lg">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Delivery Method:</p>
+                            <RadioGroup
+                              value={deliveryMethods[group.farmerId] || 'delivery'}
+                              onValueChange={(value) => setDeliveryMethods(prev => ({
+                                ...prev,
+                                [group.farmerId]: value as 'delivery' | 'pickup'
+                              }))}
+                              className="space-y-2"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="delivery" id={`delivery-${group.farmerId}`} />
+                                <Label htmlFor={`delivery-${group.farmerId}`} className="text-sm flex items-center gap-2 cursor-pointer">
+                                  <Truck className="h-4 w-4" />
+                                  Delivery ({formatPrice(deliveryFeePerFarmer)})
+                                </Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="pickup" id={`pickup-${group.farmerId}`} />
+                                <Label htmlFor={`pickup-${group.farmerId}`} className="text-sm flex items-center gap-2 cursor-pointer">
+                                  <Package className="h-4 w-4" />
+                                  Pickup (FREE)
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                            
+                            {isPickup && farmerInfo?.address && (
+                              <div className="mt-3 p-2 bg-primary/5 rounded border border-primary/10">
+                                <p className="text-xs font-medium text-primary mb-1">Pickup Location:</p>
+                                <p className="text-xs text-muted-foreground">{farmerInfo.address}</p>
+                                {farmerInfo.phone && (
+                                  <a 
+                                    href={`tel:${farmerInfo.phone}`}
+                                    className="text-xs text-primary flex items-center gap-1 mt-1 hover:underline"
+                                  >
+                                    <Phone className="h-3 w-3" />
+                                    {farmerInfo.phone}
+                                  </a>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        ))}
+                        )}
+                        
+                        <div className="space-y-1">
+                          {group.items.map(({ product, quantity }) => (
+                            <div key={product.id} className="flex justify-between text-sm">
+                              <span className="text-muted-foreground truncate mr-2">
+                                {product.name} × {quantity}
+                              </span>
+                              <span className="text-foreground">{formatPrice(product.price * quantity)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-between text-sm mt-2 pt-2 border-t border-border">
+                          <span className="text-muted-foreground">Subtotal</span>
+                          <span>{formatPrice(group.subtotal)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Delivery</span>
+                          <span className={isPickup ? 'text-primary font-medium' : ''}>
+                            {isPickup ? 'FREE' : formatPrice(deliveryFeePerFarmer)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm font-medium mt-1">
+                          <span>Order Total</span>
+                          <span>{formatPrice(group.subtotal + orderDeliveryFee)}</span>
+                        </div>
                       </div>
-                      <div className="flex justify-between text-sm mt-2 pt-2 border-t border-border">
-                        <span className="text-muted-foreground">Subtotal</span>
-                        <span>{formatPrice(group.subtotal)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Delivery</span>
-                        <span>{formatPrice(deliveryFeePerFarmer)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm font-medium mt-1">
-                        <span>Order Total</span>
-                        <span>{formatPrice(group.subtotal + deliveryFeePerFarmer)}</span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Grand Totals */}
@@ -480,7 +631,7 @@ const Checkout = () => {
                   </div>
                   <div className="flex justify-between font-semibold pt-3 border-t border-border">
                     <span className="text-foreground">Grand Total</span>
-                    <span className="text-foreground">{formatPrice(total)}</span>
+                    <span className="text-foreground">{formatPrice(adjustedTotal)}</span>
                   </div>
                 </div>
 
@@ -499,7 +650,7 @@ const Checkout = () => {
                   ) : (
                     <>
                       <CreditCard className="mr-2 h-4 w-4" />
-                      Pay {formatPrice(total)}
+                      Pay {formatPrice(adjustedTotal)}
                     </>
                   )}
                 </Button>
