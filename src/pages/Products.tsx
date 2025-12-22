@@ -6,9 +6,12 @@ import { StateBanner } from '@/components/products/StateBanner';
 import { CategoryFilter } from '@/components/products/CategoryFilter';
 import { State, ProductCategory, STATES } from '@/types';
 import { useCart } from '@/context/CartContext';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, ArrowUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+
+type SortOption = 'newest' | 'price-low' | 'price-high' | 'rating';
 import { supabase } from '@/integrations/supabase/client';
 
 interface DatabaseProduct {
@@ -43,6 +46,7 @@ const Products = () => {
   const { selectedState, setSelectedState, items, clearCart } = useCart();
   const [category, setCategory] = useState<ProductCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [products, setProducts] = useState<ProductWithFarmer[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -133,7 +137,7 @@ const Products = () => {
   };
 
   const filteredProducts = useMemo(() => {
-    return products.filter(product => {
+    const filtered = products.filter(product => {
       if (!product.farmer) return false;
       // Use product.state or fall back to farmer's state
       const productState = product.state || product.farmer.state;
@@ -144,7 +148,22 @@ const Products = () => {
         product.farmer.farm_name.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesState && matchesCategory && matchesSearch;
     });
-  }, [products, selectedState, category, searchQuery]);
+
+    // Apply sorting
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'price-low':
+          return a.price - b.price;
+        case 'price-high':
+          return b.price - a.price;
+        case 'rating':
+          return (b.average_rating || 0) - (a.average_rating || 0);
+        case 'newest':
+        default:
+          return 0; // Keep original order (newest first from DB)
+      }
+    });
+  }, [products, selectedState, category, searchQuery, sortBy]);
 
   // Transform database products to the format expected by ProductCard
   const transformedProducts = useMemo(() => {
@@ -187,16 +206,30 @@ const Products = () => {
         {/* Filters */}
         <div className="space-y-6 mb-8">
 
-          {/* Search & Category */}
+          {/* Search, Sort & Category */}
           <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products or farms..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+              <div className="relative max-w-md flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search products or farms..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <ArrowUpDown className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest</SelectItem>
+                  <SelectItem value="price-low">Price: Low to High</SelectItem>
+                  <SelectItem value="price-high">Price: High to Low</SelectItem>
+                  <SelectItem value="rating">Highest Rated</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <CategoryFilter selected={category} onChange={setCategory} />
           </div>
