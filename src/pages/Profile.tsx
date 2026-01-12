@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { BackButton } from '@/components/ui/BackButton';
 import { toast } from 'sonner';
 import { User, Package, MapPin, Settings, Star, Plus, Pencil, Trash2, Check, Phone, Mail, HelpCircle, MessageCircle, LogOut } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
@@ -183,6 +184,7 @@ export default function Profile() {
       <div className="bg-muted/30 py-8">
         <div className="container">
           <div className="flex items-center gap-4">
+            <BackButton fallbackPath="/" />
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
               <User className="h-8 w-8 text-primary" />
             </div>

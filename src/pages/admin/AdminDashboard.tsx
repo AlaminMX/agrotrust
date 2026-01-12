@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { BackButton } from '@/components/ui/BackButton';
 import { 
   Users, 
   ShoppingCart, 
@@ -178,8 +179,11 @@ export default function AdminDashboard() {
     <Layout>
       <div className="container py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
+          <div className="flex items-center gap-3 mb-2">
+            <BackButton fallbackPath="/" />
+            <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
+          </div>
+          <p className="text-muted-foreground mt-1 ml-12">
             Manage farmers, orders, and disputes
           </p>
         </div>

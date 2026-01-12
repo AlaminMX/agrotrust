@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { BackButton } from '@/components/ui/BackButton';
 import { 
   Loader2, Package, ShoppingCart, DollarSign, TrendingUp, 
   Plus, LogOut, Leaf, AlertCircle, Home, ChevronDown
@@ -145,7 +146,8 @@ export default function FarmerDashboard() {
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <BackButton fallbackPath="/" />
             <Leaf className="h-6 w-6 text-primary" />
             <span className="text-xl font-bold text-primary">Farmer Dashboard</span>
           </div>
