@@ -1,6 +1,7 @@
 import { Layout } from '@/components/layout/Layout';
 import { HowItWorksSection } from '@/components/home/HowItWorksSection';
 import { EscrowExplainer } from '@/components/home/EscrowExplainer';
+import { BackButton } from '@/components/ui/BackButton';
 import { Shield, Users, Truck, Star, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -52,13 +53,18 @@ const HowItWorks = () => {
     <Layout>
       {/* Hero */}
       <section className="py-16 bg-muted/30">
-        <div className="container text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            How AgroTrust Works
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            A marketplace built on trust, transparency, and fairness. Here's everything you need to know.
-          </p>
+        <div className="container">
+          <div className="flex items-center gap-2 mb-6">
+            <BackButton fallbackPath="/" />
+          </div>
+          <div className="text-center">
+            <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+              How AgroTrust Works
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              A marketplace built on trust, transparency, and fairness. Here's everything you need to know.
+            </p>
+          </div>
         </div>
       </section>
 

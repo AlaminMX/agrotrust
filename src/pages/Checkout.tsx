@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { BackButton } from '@/components/ui/BackButton';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -342,9 +343,12 @@ const Checkout = () => {
     <Layout>
       <div className="bg-muted/30 py-8">
         <div className="container">
-          <h1 className="text-3xl font-bold text-foreground">Checkout</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <BackButton fallbackPath="/cart" />
+            <h1 className="text-3xl font-bold text-foreground">Checkout</h1>
+          </div>
           {farmerCount > 1 && (
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 ml-12">
               {farmerCount} orders will be created for different farms
             </p>
           )}

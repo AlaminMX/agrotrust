@@ -2,10 +2,11 @@ import { useParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
+import { BackButton } from '@/components/ui/BackButton';
 import { useCart } from '@/context/CartContext';
 import { formatPrice, formatDate } from '@/lib/format';
 import { STATES, Product, State } from '@/types';
-import { Star, MapPin, Minus, Plus, ShoppingCart, ArrowLeft, Calendar, Loader2 } from 'lucide-react';
+import { Star, MapPin, Minus, Plus, ShoppingCart, Calendar, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { ProductReviews } from '@/components/reviews/ProductReviews';
@@ -176,10 +177,10 @@ const ProductDetail = () => {
     <Layout>
       <div className="container py-8">
         {/* Breadcrumb */}
-        <Link to="/products" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-6">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Products
-        </Link>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+          <BackButton fallbackPath="/products" />
+          <span>Back to Products</span>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
           {/* Product Image */}

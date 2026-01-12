@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
+import { BackButton } from '@/components/ui/BackButton';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/hooks/useAuth';
 import { formatPrice } from '@/lib/format';
@@ -68,7 +69,10 @@ const Cart = () => {
     <Layout>
       <div className="bg-muted/30 py-8">
         <div className="container">
-          <h1 className="text-3xl font-bold text-foreground">Shopping Cart</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <BackButton fallbackPath="/products" />
+            <h1 className="text-3xl font-bold text-foreground">Shopping Cart</h1>
+          </div>
           {farmerCount > 1 && (
             <p className="text-muted-foreground mt-1">
               Items from {farmerCount} different farms • Separate orders will be created

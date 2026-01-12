@@ -7,8 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, Search, Users, ShieldCheck } from 'lucide-react';
-
+import { Loader2, ArrowLeft, Search, Users, ShieldCheck, Tractor } from 'lucide-react';
+import { BackButton } from '@/components/ui/BackButton';
 interface User {
   id: string;
   user_id: string;
@@ -93,6 +93,48 @@ export default function AdminUsers() {
     }
   };
 
+  const promoteToFarmer = async (userId: string) => {
+    try {
+      // Add farmer role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({ user_id: userId, role: 'farmer' });
+
+      if (roleError) throw roleError;
+
+      // Get user profile for default values
+      const user = users.find(u => u.user_id === userId);
+
+      // Create a basic farmer profile
+      const { error: profileError } = await supabase
+        .from('farmer_profiles')
+        .insert({
+          user_id: userId,
+          farm_name: user?.full_name ? `${user.full_name}'s Farm` : 'New Farm',
+          state: 'Lagos',
+          verification_status: 'approved',
+          verified_at: new Date().toISOString(),
+        });
+
+      if (profileError) throw profileError;
+
+      setUsers(users.map(u => 
+        u.user_id === userId ? { ...u, roles: [...u.roles, 'farmer'] } : u
+      ));
+
+      toast({
+        title: 'User Promoted to Farmer',
+        description: 'User has been granted farmer access and a farmer profile has been created',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Intl.DateTimeFormat('en-NG', {
       day: 'numeric',
@@ -123,11 +165,7 @@ export default function AdminUsers() {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Link to="/admin">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
+          <BackButton fallbackPath="/admin" />
           <div className="flex items-center gap-2">
             <Users className="h-6 w-6 text-primary" />
             <span className="text-xl font-bold text-primary">User Management</span>
@@ -226,16 +264,28 @@ export default function AdminUsers() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {!user.roles.includes('admin') && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => promoteToAdmin(user.user_id)}
-                          >
-                            <ShieldCheck className="h-4 w-4 mr-1" />
-                            Make Admin
-                          </Button>
-                        )}
+                        <div className="flex gap-2 flex-wrap">
+                          {!user.roles.includes('farmer') && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => promoteToFarmer(user.user_id)}
+                            >
+                              <Tractor className="h-4 w-4 mr-1" />
+                              Make Farmer
+                            </Button>
+                          )}
+                          {!user.roles.includes('admin') && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => promoteToAdmin(user.user_id)}
+                            >
+                              <ShieldCheck className="h-4 w-4 mr-1" />
+                              Make Admin
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

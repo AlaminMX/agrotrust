@@ -4,6 +4,7 @@ import { Layout } from '@/components/layout/Layout';
 import { ProductCard } from '@/components/products/ProductCard';
 import { StateBanner } from '@/components/products/StateBanner';
 import { CategoryFilter } from '@/components/products/CategoryFilter';
+import { BackButton } from '@/components/ui/BackButton';
 import { State, ProductCategory, STATES } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { Search, Loader2, ArrowUpDown } from 'lucide-react';
