@@ -55,7 +55,7 @@ export interface TrackingEvent {
   description: string;
 }
 
-export type State = 'abuja' | 'kaduna' | 'bauchi' | 'kano';
+export type State = 'all' | 'abuja' | 'kaduna' | 'bauchi' | 'kano';
 
 export type OrderStatus = 
   | 'pending'
@@ -78,6 +78,7 @@ export type ProductCategory =
   | 'meat';
 
 export const STATES: { value: State; label: string }[] = [
+  { value: 'all', label: 'All States' },
   { value: 'kaduna', label: 'Kaduna' },
   { value: 'abuja', label: 'Abuja' },
   { value: 'bauchi', label: 'Bauchi' },

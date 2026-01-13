@@ -35,8 +35,12 @@ export const StateBanner = ({ selectedState, onStateChange, hasItemsInCart }: St
             <MapPin className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Showing products available in</p>
-            <p className="font-semibold text-lg">{currentState?.label}, Nigeria</p>
+            <p className="text-sm text-muted-foreground">
+              {selectedState === 'all' ? 'Showing products from' : 'Showing products available in'}
+            </p>
+            <p className="font-semibold text-lg">
+              {selectedState === 'all' ? 'All States' : `${currentState?.label}, Nigeria`}
+            </p>
           </div>
         </div>
 
@@ -87,10 +91,12 @@ export const StateBanner = ({ selectedState, onStateChange, hasItemsInCart }: St
         </AlertDialog>
       </div>
       
-      <p className="text-xs text-muted-foreground mt-2">
-        Products listed are only available for delivery within {currentState?.label}. 
-        Farmers in other states cannot deliver to your location.
-      </p>
+      {selectedState !== 'all' && (
+        <p className="text-xs text-muted-foreground mt-2">
+          Products listed are only available for delivery within {currentState?.label}. 
+          Farmers in other states cannot deliver to your location.
+        </p>
+      )}
     </div>
   );
 };

@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, Upload, CheckCircle2, Leaf } from 'lucide-react';
+import { Loader2, ArrowLeft, Upload, CheckCircle2, Leaf, AlertCircle, ImageIcon } from 'lucide-react';
 import { CATEGORIES } from '@/types';
 
 export default function AddProduct() {
@@ -30,6 +30,7 @@ export default function AddProduct() {
   const [availableQuantity, setAvailableQuantity] = useState('');
   const [weightKg, setWeightKg] = useState('1');
   const [productImage, setProductImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -59,6 +60,19 @@ export default function AddProduct() {
     setLoading(false);
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProductImage(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const uploadImage = async (file: File) => {
     const fileExt = file.name.split('.').pop();
     const fileName = `${user!.id}/${Date.now()}.${fileExt}`;
@@ -81,14 +95,20 @@ export default function AddProduct() {
     
     if (!farmerProfile) return;
     
+    // Validate image is required
+    if (!productImage) {
+      toast({
+        title: 'Image Required',
+        description: 'Please upload a product image before submitting',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
-      let imageUrl = null;
-      
-      if (productImage) {
-        imageUrl = await uploadImage(productImage);
-      }
+      const imageUrl = await uploadImage(productImage);
       
       const salePrice = parseFloat(price);
       const origPrice = originalPrice ? parseFloat(originalPrice) : null;
@@ -165,6 +185,64 @@ export default function AddProduct() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Product Image - Required and Prominent */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  Product Image <span className="text-destructive">*</span>
+                  <span className="text-xs text-muted-foreground">(Required)</span>
+                </Label>
+                <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                  productImage ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
+                }`}>
+                  {imagePreview ? (
+                    <div className="space-y-4">
+                      <div className="relative w-48 h-48 mx-auto rounded-lg overflow-hidden">
+                        <img 
+                          src={imagePreview} 
+                          alt="Product preview" 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex items-center justify-center gap-2 text-primary">
+                        <CheckCircle2 className="h-5 w-5" />
+                        <span className="font-medium">{productImage?.name}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setProductImage(null);
+                          setImagePreview(null);
+                        }}
+                      >
+                        Remove Image
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-muted-foreground">
+                      <div className="flex items-center justify-center mb-3">
+                        <div className="p-4 rounded-full bg-muted">
+                          <ImageIcon className="h-8 w-8" />
+                        </div>
+                      </div>
+                      <p className="font-medium mb-1">Upload product image</p>
+                      <p className="text-sm mb-3">High quality images help products sell better</p>
+                      <div className="flex items-center justify-center gap-2 text-sm text-destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <span>Image is required to list a product</span>
+                      </div>
+                    </div>
+                  )}
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    className={`mt-4 ${imagePreview ? 'hidden' : ''}`}
+                    onChange={handleImageChange}
+                  />
+                </div>
+              </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="name">Product Name *</Label>
                 <Input
@@ -282,34 +360,15 @@ export default function AddProduct() {
                 </div>
               </div>
               
-              <div className="space-y-3">
-                <Label>Product Image</Label>
-                <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                  {productImage ? (
-                    <div className="flex items-center justify-center gap-2 text-primary">
-                      <CheckCircle2 className="h-5 w-5" />
-                      <span>{productImage.name}</span>
-                    </div>
-                  ) : (
-                    <div className="text-muted-foreground">
-                      <Upload className="h-8 w-8 mx-auto mb-2" />
-                      <p>Upload product image</p>
-                    </div>
-                  )}
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    className="mt-4"
-                    onChange={(e) => setProductImage(e.target.files?.[0] || null)}
-                  />
-                </div>
-              </div>
-              
               <div className="flex gap-4 pt-4">
                 <Button type="button" variant="outline" onClick={() => navigate('/farmer/dashboard')}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting} className="flex-1">
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting || !productImage} 
+                  className="flex-1"
+                >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -320,6 +379,12 @@ export default function AddProduct() {
                   )}
                 </Button>
               </div>
+              
+              {!productImage && (
+                <p className="text-center text-sm text-muted-foreground">
+                  Please upload a product image to enable the Add Product button
+                </p>
+              )}
             </form>
           </CardContent>
         </Card>

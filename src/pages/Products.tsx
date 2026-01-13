@@ -4,16 +4,19 @@ import { Layout } from '@/components/layout/Layout';
 import { ProductCard } from '@/components/products/ProductCard';
 import { StateBanner } from '@/components/products/StateBanner';
 import { CategoryFilter } from '@/components/products/CategoryFilter';
-import { BackButton } from '@/components/ui/BackButton';
 import { State, ProductCategory, STATES } from '@/types';
 import { useCart } from '@/context/CartContext';
-import { Search, Loader2, ArrowUpDown } from 'lucide-react';
+import { Search, Loader2, ArrowUpDown, SlidersHorizontal, X, Star } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 type SortOption = 'newest' | 'price-low' | 'price-high' | 'rating';
-import { supabase } from '@/integrations/supabase/client';
 
 interface DatabaseProduct {
   id: string;
@@ -50,6 +53,17 @@ const Products = () => {
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [products, setProducts] = useState<ProductWithFarmer[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Advanced filters
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
+  const [minRating, setMinRating] = useState<number>(0);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // Get max price for slider
+  const maxPrice = useMemo(() => {
+    if (products.length === 0) return 100000;
+    return Math.max(...products.map(p => p.price)) + 1000;
+  }, [products]);
 
   // Handle state from URL params (from onboarding)
   useEffect(() => {
@@ -128,7 +142,8 @@ const Products = () => {
   }, []);
 
   const handleStateChange = (newState: State) => {
-    if (items.length > 0 && newState !== selectedState) {
+    // Don't clear cart when changing to/from "all"
+    if (items.length > 0 && newState !== selectedState && newState !== 'all' && selectedState !== 'all') {
       clearCart();
       toast.info('Cart cleared', { 
         description: 'Your cart was cleared because you changed your delivery location.' 
@@ -137,17 +152,39 @@ const Products = () => {
     setSelectedState(newState);
   };
 
+  const resetFilters = () => {
+    setPriceRange([0, maxPrice]);
+    setMinRating(0);
+    setCategory('all');
+    setSearchQuery('');
+    setSortBy('newest');
+  };
+
+  const hasActiveFilters = priceRange[0] > 0 || priceRange[1] < maxPrice || minRating > 0;
+
   const filteredProducts = useMemo(() => {
     const filtered = products.filter(product => {
       if (!product.farmer) return false;
+      
       // Use product.state or fall back to farmer's state
       const productState = product.state || product.farmer.state;
-      const matchesState = productState === selectedState;
+      
+      // State filter - "all" shows all states
+      const matchesState = selectedState === 'all' || productState === selectedState;
+      
       const matchesCategory = category === 'all' || product.category === category;
       const matchesSearch = searchQuery === '' || 
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.farmer.farm_name.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesState && matchesCategory && matchesSearch;
+      
+      // Price range filter
+      const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
+      
+      // Rating filter
+      const productRating = product.average_rating || 0;
+      const matchesRating = productRating >= minRating;
+      
+      return matchesState && matchesCategory && matchesSearch && matchesPrice && matchesRating;
     });
 
     // Apply sorting
@@ -164,7 +201,7 @@ const Products = () => {
           return 0; // Keep original order (newest first from DB)
       }
     });
-  }, [products, selectedState, category, searchQuery, sortBy]);
+  }, [products, selectedState, category, searchQuery, sortBy, priceRange, minRating]);
 
   // Transform database products to the format expected by ProductCard
   const transformedProducts = useMemo(() => {
@@ -186,6 +223,9 @@ const Products = () => {
       isVerified: product.farmer!.verification_status === 'approved',
     }));
   }, [filteredProducts]);
+
+  // Show state on products when viewing "all"
+  const showStateOnProducts = selectedState === 'all';
 
   return (
     <Layout>
@@ -231,9 +271,102 @@ const Products = () => {
                   <SelectItem value="rating">Highest Rated</SelectItem>
                 </SelectContent>
               </Select>
+              
+              {/* Advanced Filters Button */}
+              <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Filters
+                    {hasActiveFilters && (
+                      <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                        !
+                      </span>
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent>
+                  <SheetHeader>
+                    <SheetTitle>Filter Products</SheetTitle>
+                  </SheetHeader>
+                  <div className="py-6 space-y-8">
+                    {/* Price Range */}
+                    <div className="space-y-4">
+                      <Label className="text-base font-semibold">Price Range</Label>
+                      <Slider
+                        value={priceRange}
+                        onValueChange={(value) => setPriceRange(value as [number, number])}
+                        min={0}
+                        max={maxPrice}
+                        step={100}
+                        className="mt-2"
+                      />
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>₦{priceRange[0].toLocaleString()}</span>
+                        <span>₦{priceRange[1].toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    {/* Minimum Rating */}
+                    <div className="space-y-4">
+                      <Label className="text-base font-semibold">Minimum Rating</Label>
+                      <div className="flex gap-2">
+                        {[0, 1, 2, 3, 4].map((rating) => (
+                          <Button
+                            key={rating}
+                            variant={minRating === rating ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setMinRating(rating)}
+                            className="gap-1"
+                          >
+                            {rating === 0 ? 'All' : (
+                              <>
+                                {rating}+
+                                <Star className="h-3 w-3 fill-current" />
+                              </>
+                            )}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Reset Filters */}
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={resetFilters}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Reset All Filters
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
             </div>
             <CategoryFilter selected={category} onChange={setCategory} />
           </div>
+          
+          {/* Active Filters Display */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-sm text-muted-foreground">Active filters:</span>
+              {priceRange[0] > 0 && (
+                <Button variant="secondary" size="sm" onClick={() => setPriceRange([0, priceRange[1]])}>
+                  Min: ₦{priceRange[0].toLocaleString()} <X className="h-3 w-3 ml-1" />
+                </Button>
+              )}
+              {priceRange[1] < maxPrice && (
+                <Button variant="secondary" size="sm" onClick={() => setPriceRange([priceRange[0], maxPrice])}>
+                  Max: ₦{priceRange[1].toLocaleString()} <X className="h-3 w-3 ml-1" />
+                </Button>
+              )}
+              {minRating > 0 && (
+                <Button variant="secondary" size="sm" onClick={() => setMinRating(0)}>
+                  {minRating}+ Stars <X className="h-3 w-3 ml-1" />
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Products Grid */}
@@ -244,17 +377,22 @@ const Products = () => {
         ) : transformedProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {transformedProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} showState={showStateOnProducts} />
             ))}
           </div>
         ) : (
           <div className="text-center py-16">
             <p className="text-lg text-muted-foreground mb-2">No products found</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground mb-4">
               {products.length === 0 
                 ? 'No products have been listed yet. Check back soon!'
                 : 'Try adjusting your filters or search query'}
             </p>
+            {hasActiveFilters && (
+              <Button variant="outline" onClick={resetFilters}>
+                Clear All Filters
+              </Button>
+            )}
           </div>
         )}
       </div>
