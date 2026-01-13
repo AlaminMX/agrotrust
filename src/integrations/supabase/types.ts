@@ -869,7 +869,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_farmer_approved: { Args: { farmer_id: string }; Returns: boolean }
+      is_farmer_approved: { Args: { _farmer_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "consumer" | "farmer" | "admin"
