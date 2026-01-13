@@ -83,8 +83,28 @@ export default function FarmerOnboarding() {
   useEffect(() => {
     if (user) {
       checkExistingProfile();
+      ensureFarmerRole();
     }
   }, [user]);
+
+  const ensureFarmerRole = async () => {
+    if (!user) return;
+    
+    // Check if user already has farmer role
+    const { data: existingRole } = await supabase
+      .from('user_roles')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('role', 'farmer')
+      .maybeSingle();
+    
+    // Add farmer role if not already present (needed for bank verification during onboarding)
+    if (!existingRole) {
+      await supabase
+        .from('user_roles')
+        .insert({ user_id: user.id, role: 'farmer' });
+    }
+  };
 
   // Load areas when state is Abuja
   useEffect(() => {
@@ -205,11 +225,6 @@ export default function FarmerOnboarding() {
       if (farmRegistration) {
         farmRegUrl = await uploadDocument(farmRegistration, 'farm-registration');
       }
-      
-      // Add farmer role
-      await supabase
-        .from('user_roles')
-        .insert({ user_id: user.id, role: 'farmer' });
       
       // Create farmer profile with bank details
       const { error } = await supabase
