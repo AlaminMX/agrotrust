@@ -1,5 +1,5 @@
 import { State, STATES } from '@/types';
-import { MapPin, AlertTriangle } from 'lucide-react';
+import { MapPin, AlertTriangle, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -22,6 +22,7 @@ interface StateBannerProps {
 
 export const StateBanner = ({ selectedState, onStateChange, hasItemsInCart }: StateBannerProps) => {
   const currentState = STATES.find(s => s.value === selectedState);
+  const isAllStates = selectedState === 'all';
 
   const handleStateChange = (newState: State) => {
     onStateChange(newState);
@@ -32,11 +33,19 @@ export const StateBanner = ({ selectedState, onStateChange, hasItemsInCart }: St
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-            <MapPin className="h-5 w-5 text-primary" />
+            {isAllStates ? (
+              <Globe className="h-5 w-5 text-primary" />
+            ) : (
+              <MapPin className="h-5 w-5 text-primary" />
+            )}
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Showing products available in</p>
-            <p className="font-semibold text-lg">{currentState?.label}, Nigeria</p>
+            <p className="text-sm text-muted-foreground">
+              {isAllStates ? 'Showing products from' : 'Showing products available in'}
+            </p>
+            <p className="font-semibold text-lg">
+              {isAllStates ? 'All States in Nigeria' : `${currentState?.label}, Nigeria`}
+            </p>
           </div>
         </div>
 
@@ -58,7 +67,7 @@ export const StateBanner = ({ selectedState, onStateChange, hasItemsInCart }: St
                     </span>
                   </span>
                 ) : (
-                  'Select a different state to see products available for delivery in that area.'
+                  'Select a different state to see products available for delivery in that area, or choose "All Nigeria" to browse everything.'
                 )}
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -73,7 +82,11 @@ export const StateBanner = ({ selectedState, onStateChange, hasItemsInCart }: St
                     selectedState === state.value && "bg-primary"
                   )}
                 >
-                  <MapPin className="h-4 w-4 mr-2" />
+                  {state.value === 'all' ? (
+                    <Globe className="h-4 w-4 mr-2" />
+                  ) : (
+                    <MapPin className="h-4 w-4 mr-2" />
+                  )}
                   {state.label}
                   {selectedState === state.value && ' (Current)'}
                 </AlertDialogAction>
@@ -88,8 +101,10 @@ export const StateBanner = ({ selectedState, onStateChange, hasItemsInCart }: St
       </div>
       
       <p className="text-xs text-muted-foreground mt-2">
-        Products listed are only available for delivery within {currentState?.label}. 
-        Farmers in other states cannot deliver to your location.
+        {isAllStates 
+          ? 'Showing products from all states. When you checkout, delivery is only available within the farmer\'s state.'
+          : `Products listed are only available for delivery within ${currentState?.label}. Farmers in other states cannot deliver to your location.`
+        }
       </p>
     </div>
   );

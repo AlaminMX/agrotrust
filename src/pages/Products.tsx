@@ -4,16 +4,16 @@ import { Layout } from '@/components/layout/Layout';
 import { ProductCard } from '@/components/products/ProductCard';
 import { StateBanner } from '@/components/products/StateBanner';
 import { CategoryFilter } from '@/components/products/CategoryFilter';
-import { BackButton } from '@/components/ui/BackButton';
+import { ProductFilters } from '@/components/products/ProductFilters';
 import { State, ProductCategory, STATES } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { Search, Loader2, ArrowUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 type SortOption = 'newest' | 'price-low' | 'price-high' | 'rating';
-import { supabase } from '@/integrations/supabase/client';
 
 interface DatabaseProduct {
   id: string;
@@ -50,6 +50,11 @@ const Products = () => {
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [products, setProducts] = useState<ProductWithFarmer[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Advanced filters
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [minRating, setMinRating] = useState<number | null>(null);
 
   // Handle state from URL params (from onboarding)
   useEffect(() => {
@@ -128,7 +133,7 @@ const Products = () => {
   }, []);
 
   const handleStateChange = (newState: State) => {
-    if (items.length > 0 && newState !== selectedState) {
+    if (items.length > 0 && newState !== selectedState && newState !== 'all' && selectedState !== 'all') {
       clearCart();
       toast.info('Cart cleared', { 
         description: 'Your cart was cleared because you changed your delivery location.' 
@@ -137,17 +142,43 @@ const Products = () => {
     setSelectedState(newState);
   };
 
+  const clearFilters = () => {
+    setMinPrice('');
+    setMaxPrice('');
+    setMinRating(null);
+  };
+
+  const activeFiltersCount = [
+    minPrice !== '',
+    maxPrice !== '',
+    minRating !== null,
+  ].filter(Boolean).length;
+
   const filteredProducts = useMemo(() => {
     const filtered = products.filter(product => {
       if (!product.farmer) return false;
+      
       // Use product.state or fall back to farmer's state
       const productState = product.state || product.farmer.state;
-      const matchesState = productState === selectedState;
+      
+      // Location filter - if 'all' is selected, show all products
+      const matchesState = selectedState === 'all' || productState === selectedState;
+      
       const matchesCategory = category === 'all' || product.category === category;
       const matchesSearch = searchQuery === '' || 
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.farmer.farm_name.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesState && matchesCategory && matchesSearch;
+      
+      // Price filter
+      const minPriceNum = minPrice ? parseFloat(minPrice) : 0;
+      const maxPriceNum = maxPrice ? parseFloat(maxPrice) : Infinity;
+      const matchesPrice = product.price >= minPriceNum && product.price <= maxPriceNum;
+      
+      // Rating filter
+      const productRating = product.average_rating || 0;
+      const matchesRating = minRating === null || productRating >= minRating;
+      
+      return matchesState && matchesCategory && matchesSearch && matchesPrice && matchesRating;
     });
 
     // Apply sorting
@@ -164,7 +195,7 @@ const Products = () => {
           return 0; // Keep original order (newest first from DB)
       }
     });
-  }, [products, selectedState, category, searchQuery, sortBy]);
+  }, [products, selectedState, category, searchQuery, sortBy, minPrice, maxPrice, minRating]);
 
   // Transform database products to the format expected by ProductCard
   const transformedProducts = useMemo(() => {
@@ -187,6 +218,9 @@ const Products = () => {
     }));
   }, [filteredProducts]);
 
+  // Determine if we should show state on product cards (when "All" is selected)
+  const showStateOnCards = selectedState === 'all';
+
   return (
     <Layout>
       <div className="bg-muted/30 py-8">
@@ -204,59 +238,72 @@ const Products = () => {
           hasItemsInCart={items.length > 0}
         />
 
-        {/* Filters */}
-        <div className="space-y-6 mb-8">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Filters Sidebar */}
+          <ProductFilters
+            minPrice={minPrice}
+            maxPrice={maxPrice}
+            minRating={minRating}
+            onMinPriceChange={setMinPrice}
+            onMaxPriceChange={setMaxPrice}
+            onMinRatingChange={setMinRating}
+            onClearFilters={clearFilters}
+            activeFiltersCount={activeFiltersCount}
+          />
 
-          {/* Search, Sort & Category */}
-          <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
-            <div className="flex flex-col sm:flex-row gap-3 flex-1">
-              <div className="relative max-w-md flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search products or farms..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+          {/* Main Content */}
+          <div className="flex-1">
+            {/* Search, Sort & Category */}
+            <div className="space-y-4 mb-6">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search products or farms..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <ArrowUpDown className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest</SelectItem>
+                    <SelectItem value="price-low">Price: Low to High</SelectItem>
+                    <SelectItem value="price-high">Price: High to Low</SelectItem>
+                    <SelectItem value="rating">Highest Rated</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <ArrowUpDown className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">Newest</SelectItem>
-                  <SelectItem value="price-low">Price: Low to High</SelectItem>
-                  <SelectItem value="price-high">Price: High to Low</SelectItem>
-                  <SelectItem value="rating">Highest Rated</SelectItem>
-                </SelectContent>
-              </Select>
+              <CategoryFilter selected={category} onChange={setCategory} />
             </div>
-            <CategoryFilter selected={category} onChange={setCategory} />
+
+            {/* Products Grid */}
+            {loading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : transformedProducts.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {transformedProducts.map(product => (
+                  <ProductCard key={product.id} product={product} showState={showStateOnCards} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <p className="text-lg text-muted-foreground mb-2">No products found</p>
+                <p className="text-sm text-muted-foreground">
+                  {products.length === 0 
+                    ? 'No products have been listed yet. Check back soon!'
+                    : 'Try adjusting your filters or search query'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Products Grid */}
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : transformedProducts.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {transformedProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <p className="text-lg text-muted-foreground mb-2">No products found</p>
-            <p className="text-sm text-muted-foreground">
-              {products.length === 0 
-                ? 'No products have been listed yet. Check back soon!'
-                : 'Try adjusting your filters or search query'}
-            </p>
-          </div>
-        )}
       </div>
     </Layout>
   );
