@@ -38,22 +38,23 @@ serve(async (req) => {
       );
     }
 
-    // Verify user is a farmer (only farmers should be verifying bank accounts)
-    const { data: farmerProfile, error: farmerError } = await supabase
-      .from('farmer_profiles')
+    // Verify user has farmer role (they may be onboarding and not have a profile yet)
+    const { data: farmerRole, error: roleError } = await supabase
+      .from('user_roles')
       .select('id')
       .eq('user_id', user.id)
+      .eq('role', 'farmer')
       .maybeSingle();
 
-    if (farmerError || !farmerProfile) {
-      console.error("User is not a farmer:", farmerError?.message);
+    if (roleError || !farmerRole) {
+      console.error("User does not have farmer role:", roleError?.message);
       return new Response(
         JSON.stringify({ success: false, error: "Only farmers can verify bank accounts" }),
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    console.log(`Farmer ${farmerProfile.id} verifying bank account`);
+    console.log(`User ${user.id} (farmer role) verifying bank account`);
 
     const PAYSTACK_SECRET_KEY = Deno.env.get("PAYSTACK_SECRET_KEY");
     
