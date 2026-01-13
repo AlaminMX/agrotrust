@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom';
-import { Star, ShoppingCart, Heart } from 'lucide-react';
+import { Star, ShoppingCart, Heart, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { useCart } from '@/context/CartContext';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { STATES, State } from '@/types';
 
 interface ProductData {
   id: string;
@@ -26,13 +28,15 @@ interface ProductData {
   farmName?: string;
   is_verified?: boolean;
   isVerified?: boolean;
+  state?: string;
 }
 
 interface JumiaProductCardProps {
   product: ProductData;
+  showState?: boolean;
 }
 
-export const JumiaProductCard = ({ product }: JumiaProductCardProps) => {
+export const JumiaProductCard = ({ product, showState = false }: JumiaProductCardProps) => {
   const { addToCart } = useCart();
   const [isWishlisted, setIsWishlisted] = useState(false);
 
@@ -45,6 +49,10 @@ export const JumiaProductCard = ({ product }: JumiaProductCardProps) => {
   const reviewCount = product.review_count ?? product.reviewCount ?? 0;
   const farmName = product.farm_name || product.farmName || 'Local Farm';
   const isVerified = product.is_verified ?? product.isVerified ?? false;
+  const productState = product.state as State | undefined;
+  const stateLabel = productState && productState !== 'all' 
+    ? STATES.find(s => s.value === productState)?.label 
+    : null;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -94,11 +102,11 @@ export const JumiaProductCard = ({ product }: JumiaProductCardProps) => {
           </span>
         )}
 
-        {/* Verified Badge */}
+        {/* Verified Farmer Badge - More Prominent */}
         {isVerified && (
-          <span className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded flex items-center gap-1">
-            ✓ Verified
-          </span>
+          <div className="absolute top-2 right-2">
+            <VerifiedBadge variant="prominent" size="sm" showText={false} />
+          </div>
         )}
 
         {/* Low Stock Warning */}
@@ -130,6 +138,13 @@ export const JumiaProductCard = ({ product }: JumiaProductCardProps) => {
 
       {/* Content */}
       <div className="p-3 space-y-2">
+        {/* Verified Farmer Label - Highly Visible */}
+        {isVerified && (
+          <div className="flex items-center">
+            <VerifiedBadge size="sm" />
+          </div>
+        )}
+
         {/* Product Name */}
         <h3 className="font-medium text-foreground text-sm line-clamp-2 min-h-[40px] group-hover:text-primary transition-colors">
           {product.name}
@@ -157,10 +172,16 @@ export const JumiaProductCard = ({ product }: JumiaProductCardProps) => {
           <span className="text-xs text-muted-foreground">({reviewCount})</span>
         </div>
 
-        {/* Farm Name */}
-        <p className="text-xs text-muted-foreground truncate">
-          by {farmName}
-        </p>
+        {/* Farm Name & State */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span className="truncate">by {farmName}</span>
+          {showState && stateLabel && (
+            <span className="flex items-center gap-0.5 shrink-0 ml-2 text-primary font-medium">
+              <MapPin className="h-3 w-3" />
+              {stateLabel}
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   );

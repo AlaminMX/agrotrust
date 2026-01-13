@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Star, MapPin, ShoppingCart } from 'lucide-react';
+import { Star, MapPin, ShoppingCart, ShieldCheck } from 'lucide-react';
 import { Product, STATES } from '@/types';
 import { Button } from '@/components/ui/button';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
@@ -9,11 +9,14 @@ import { toast } from 'sonner';
 
 interface ProductCardProps {
   product: Product;
+  showState?: boolean;
 }
 
-export const ProductCard = ({ product }: ProductCardProps) => {
+export const ProductCard = ({ product, showState = false }: ProductCardProps) => {
   const { addToCart } = useCart();
-  const stateLabel = STATES.find(s => s.value === product.state)?.label || product.state;
+  const stateLabel = product.state && product.state !== 'all' 
+    ? STATES.find(s => s.value === product.state)?.label 
+    : null;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -36,9 +39,13 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           alt={product.name}
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
+        {/* Prominent Verified Badge */}
         {product.isVerified && (
-          <div className="absolute top-3 left-3 rounded-full bg-card/95 backdrop-blur px-2.5 py-1">
-            <VerifiedBadge size="sm" />
+          <div className="absolute top-3 left-3">
+            <span className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground font-semibold px-2.5 py-1 rounded-full text-xs shadow-lg">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Verified Farmer
+            </span>
           </div>
         )}
       </div>
@@ -48,10 +55,17 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         {/* Farm Info */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span className="font-medium text-earth">{product.farmName}</span>
-          <span className="flex items-center gap-1">
-            <MapPin className="h-3 w-3" />
-            {stateLabel}
-          </span>
+          {showState && stateLabel ? (
+            <span className="flex items-center gap-1 text-primary font-medium">
+              <MapPin className="h-3 w-3" />
+              {stateLabel}
+            </span>
+          ) : stateLabel && (
+            <span className="flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              {stateLabel}
+            </span>
+          )}
         </div>
 
         {/* Product Name */}

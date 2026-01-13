@@ -3,7 +3,7 @@ import { ShoppingCart, Menu, X, Leaf, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/hooks/useAuth';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -26,6 +26,7 @@ export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const location = useLocation();
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchUserRoles = async () => {
@@ -41,6 +42,28 @@ export const Header = () => {
     };
     fetchUserRoles();
   }, [user]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
+  // Close menu on route change
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname]);
 
   const isFarmer = userRoles.includes('farmer');
   const isAdmin = userRoles.includes('admin');
@@ -136,27 +159,38 @@ export const Header = () => {
         </div>
       </div>
 
-      {/* Mobile Navigation */}
+      {/* Mobile Navigation with Backdrop */}
       {isMenuOpen && (
-        <div className="md:hidden border-t border-border bg-card">
-          <nav className="container py-4 flex flex-col gap-3">
-            {navLinks.map(link => (
-              <Link
-                key={link.href}
-                to={link.href}
-                onClick={() => setIsMenuOpen(false)}
-                className={cn(
-                  "text-sm font-medium py-2 transition-colors hover:text-primary",
-                  location.pathname === link.href
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
+        <>
+          {/* Backdrop overlay - click to close */}
+          <div 
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden"
+            onClick={() => setIsMenuOpen(false)}
+          />
+          {/* Menu content */}
+          <div 
+            ref={menuRef}
+            className="fixed top-16 left-0 right-0 z-50 md:hidden border-b border-border bg-card shadow-lg"
+          >
+            <nav className="container py-4 flex flex-col gap-3">
+              {navLinks.map(link => (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={cn(
+                    "text-sm font-medium py-2 transition-colors hover:text-primary",
+                    location.pathname === link.href
+                      ? "text-primary"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </>
       )}
     </header>
   );
