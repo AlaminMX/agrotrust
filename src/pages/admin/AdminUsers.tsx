@@ -222,7 +222,7 @@ export default function AdminUsers() {
     }
   };
 
-  const removeRole = async (userId: string, role: string) => {
+  const removeRole = async (userId: string, role: 'admin' | 'consumer' | 'farmer') => {
     try {
       const { error } = await supabase
         .from('user_roles')
@@ -502,10 +502,6 @@ export default function AdminUsers() {
                                 variant="ghost"
                                 onClick={() => removeRole(user.user_id, 'admin')}
                               >
-                                <UserX className="h-4 w-4 mr-1" />
-                                Remove Admin
-                              </Button>
-                            )}
                                 <UserX className="h-4 w-4 mr-1" />
                                 Remove Admin
                               </Button>
