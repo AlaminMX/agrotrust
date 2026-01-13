@@ -45,9 +45,9 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 const loadStateFromStorage = (): State => {
   try {
     const stored = localStorage.getItem(STATE_STORAGE_KEY);
-    return (stored as State) || 'abuja';
+    return (stored as State) || 'kaduna';
   } catch {
-    return 'abuja';
+    return 'kaduna';
   }
 };
 
@@ -175,7 +175,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 farmerId: prod.farmer_id,
                 farmerName: farmer?.farm_name || 'Unknown Farmer',
                 farmName: farmer?.farm_name || 'Unknown Farm',
-                state: (prod.state || farmer?.state || 'abuja') as State,
+                state: (prod.state || farmer?.state || 'kaduna') as State,
                 available: prod.available_quantity,
                 isVerified: farmer?.verification_status === 'approved',
                 rating: prod.average_rating || 0,

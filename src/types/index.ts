@@ -78,8 +78,8 @@ export type ProductCategory =
   | 'meat';
 
 export const STATES: { value: State; label: string }[] = [
-  { value: 'abuja', label: 'Abuja' },
   { value: 'kaduna', label: 'Kaduna' },
+  { value: 'abuja', label: 'Abuja' },
   { value: 'bauchi', label: 'Bauchi' },
   { value: 'kano', label: 'Kano' },
 ];

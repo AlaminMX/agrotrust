@@ -62,7 +62,7 @@ export const FlashDeals = () => {
             rating: p.average_rating || 4.5,
             reviewCount: p.review_count || 0,
             available: p.available_quantity,
-            state: (p.state || 'abuja') as Product['state'],
+            state: (p.state || 'kaduna') as Product['state'],
           };
         });
       

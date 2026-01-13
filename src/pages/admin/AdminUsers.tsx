@@ -111,7 +111,7 @@ export default function AdminUsers() {
         .insert({
           user_id: userId,
           farm_name: user?.full_name ? `${user.full_name}'s Farm` : 'New Farm',
-          state: 'Lagos',
+          state: 'kaduna',
           verification_status: 'approved',
           verified_at: new Date().toISOString(),
         });
