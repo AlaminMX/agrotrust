@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
-import { Star, ShoppingCart, Heart } from 'lucide-react';
+import { Star, ShoppingCart, Heart, ShieldCheck, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { STATES } from '@/types';
 
 interface ProductData {
   id: string;
@@ -26,13 +27,15 @@ interface ProductData {
   farmName?: string;
   is_verified?: boolean;
   isVerified?: boolean;
+  state?: string;
 }
 
 interface JumiaProductCardProps {
   product: ProductData;
+  showState?: boolean;
 }
 
-export const JumiaProductCard = ({ product }: JumiaProductCardProps) => {
+export const JumiaProductCard = ({ product, showState = false }: JumiaProductCardProps) => {
   const { addToCart } = useCart();
   const [isWishlisted, setIsWishlisted] = useState(false);
 
@@ -45,6 +48,7 @@ export const JumiaProductCard = ({ product }: JumiaProductCardProps) => {
   const reviewCount = product.review_count ?? product.reviewCount ?? 0;
   const farmName = product.farm_name || product.farmName || 'Local Farm';
   const isVerified = product.is_verified ?? product.isVerified ?? false;
+  const stateLabel = STATES.find(s => s.value === product.state)?.label || product.state || '';
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -94,11 +98,12 @@ export const JumiaProductCard = ({ product }: JumiaProductCardProps) => {
           </span>
         )}
 
-        {/* Verified Badge */}
+        {/* Verified Farmer Badge - Prominent */}
         {isVerified && (
-          <span className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded flex items-center gap-1">
-            ✓ Verified
-          </span>
+          <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            <span className="font-bold uppercase tracking-wide">Verified</span>
+          </div>
         )}
 
         {/* Low Stock Warning */}
@@ -157,10 +162,22 @@ export const JumiaProductCard = ({ product }: JumiaProductCardProps) => {
           <span className="text-xs text-muted-foreground">({reviewCount})</span>
         </div>
 
-        {/* Farm Name */}
-        <p className="text-xs text-muted-foreground truncate">
-          by {farmName}
-        </p>
+        {/* Farm Name & State */}
+        <div className="flex items-center justify-between">
+          <p className={cn(
+            "text-xs truncate flex items-center gap-1",
+            isVerified ? "text-primary font-medium" : "text-muted-foreground"
+          )}>
+            {isVerified && <ShieldCheck className="h-3 w-3 flex-shrink-0" />}
+            {farmName}
+          </p>
+          {showState && stateLabel && (
+            <span className="text-xs text-muted-foreground flex items-center gap-0.5 flex-shrink-0">
+              <MapPin className="h-3 w-3" />
+              {stateLabel}
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   );
