@@ -226,6 +226,15 @@ export default function AdminDashboard() {
             <Button variant="outline" asChild>
               <Link to="/admin/disputes">Resolve Disputes</Link>
             </Button>
+            <Button variant="outline" asChild>
+              <Link to="/admin/users">User Management</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/admin/products">Products</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/admin/payouts">Payouts</Link>
+            </Button>
           </CardContent>
         </Card>
       </div>

@@ -105,7 +105,7 @@ const ProductDetail = () => {
           farmerId: farmerData?.id || dbProduct.farmer_id,
           farmerName: farmerName,
           farmName: farmerData?.farm_name || 'Unknown Farm',
-          state: (dbProduct.state || farmerData?.state || 'abuja') as State,
+          state: (dbProduct.state || farmerData?.state || 'kaduna') as State,
           available: dbProduct.available_quantity,
           isVerified: farmerData?.verification_status === 'approved',
           rating: dbProduct.average_rating || 0,
