@@ -279,7 +279,6 @@ export const getFarmerById = (id: string): Farmer | undefined => {
 };
 
 export const DELIVERY_FEES: Record<State, number> = {
-  all: 2000,
   abuja: 1500,
   kaduna: 2000,
   bauchi: 2500,
