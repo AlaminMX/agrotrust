@@ -13,9 +13,37 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const paystackSecretKey = Deno.env.get("PAYSTACK_SECRET_KEY")!;
 
+    // SECURITY: Verify authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create client with user's auth token for verification
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+      console.error('Unauthorized user:', userError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Payment verification request from user: ${user.id}`);
+
+    // Service client for privileged operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { reference } = await req.json();
@@ -115,6 +143,16 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Orders not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // SECURITY: Verify user owns ALL orders being updated
+    const unauthorizedOrders = orders.filter(o => o.consumer_id !== user.id);
+    if (unauthorizedOrders.length > 0) {
+      console.error(`User ${user.id} attempted to verify orders they don't own: ${unauthorizedOrders.map(o => o.id).join(', ')}`);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: You can only verify your own orders' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

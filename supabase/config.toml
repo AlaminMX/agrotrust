@@ -7,7 +7,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.paystack-verify]
-verify_jwt = false
+verify_jwt = true
 
 [functions.create-transfer-recipient]
 verify_jwt = true
