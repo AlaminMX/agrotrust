@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+import { useCart } from '@/context/CartContext';
 
 const tabs = [
   { id: 'all', label: 'All Products' },
@@ -15,6 +16,7 @@ const tabs = [
 ];
 
 export const FeaturedProductsSection = () => {
+  const { selectedState } = useCart();
   const [activeTab, setActiveTab] = useState('all');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,19 +50,23 @@ export const FeaturedProductsSection = () => {
       // Fetch farmer data from public view (safe - no sensitive data)
       const { data: farmersData } = await supabase
         .from('farmer_profiles_public')
-        .select('id, farm_name, verification_status')
+        .select('id, farm_name, verification_status, state')
         .in('id', farmerIds)
         .eq('verification_status', 'approved');
 
       // Create farmer lookup map
-      const farmerMap = new Map<string, { farm_name: string; verification_status: string }>();
+      const farmerMap = new Map<string, { farm_name: string | null; verification_status: string | null; state: string | null }>();
       farmersData?.forEach(farmer => {
-        farmerMap.set(farmer.id, farmer);
+        farmerMap.set(farmer.id!, farmer);
       });
 
-      // Combine and filter to only products from approved farmers
+      // Combine and filter to only products from approved farmers AND matching selected state
       const transformed: Product[] = productsData
         .filter(p => farmerMap.has(p.farmer_id))
+        .filter(p => {
+          const productState = p.state || farmerMap.get(p.farmer_id)?.state;
+          return selectedState === 'all' || productState === selectedState;
+        })
         .slice(0, 8)
         .map(p => {
           const farmer = farmerMap.get(p.farmer_id)!;
@@ -87,7 +93,7 @@ export const FeaturedProductsSection = () => {
       setLoading(false);
     };
     fetchProducts();
-  }, [activeTab]);
+  }, [activeTab, selectedState]);
 
   return (
     <section className="py-10 bg-card">
@@ -124,9 +130,9 @@ export const FeaturedProductsSection = () => {
             <p className="text-muted-foreground">No products found in this category</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
             {products.map(product => (
-              <JumiaProductCard key={product.id} product={product} showState={true} />
+              <JumiaProductCard key={product.id} product={product} showState={selectedState === 'all'} />
             ))}
           </div>
         )}
