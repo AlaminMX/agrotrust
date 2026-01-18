@@ -41,6 +41,7 @@ interface User {
   onboarding_completed: boolean;
   roles: string[];
   farmerProfile?: FarmerProfile | null;
+  preferred_state: string | null;
 }
 
 export default function AdminUsers() {
@@ -441,6 +442,7 @@ export default function AdminUsers() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>User</TableHead>
+                    <TableHead>Location</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Farm Details</TableHead>
                     <TableHead>Joined</TableHead>
@@ -464,6 +466,17 @@ export default function AdminUsers() {
                               <p className="text-xs text-muted-foreground">{user.phone}</p>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="capitalize text-sm">
+                            {user.preferred_state ? (
+                              <span className="flex items-center gap-1">
+                                📍 {user.preferred_state}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">Not set</span>
+                            )}
+                          </span>
                         </TableCell>
                         <TableCell>
                           <Badge variant={userType.variant} className="flex items-center gap-1 w-fit">
