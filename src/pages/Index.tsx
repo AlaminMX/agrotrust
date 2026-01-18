@@ -6,10 +6,14 @@ import { FeaturedProductsSection } from '@/components/home/FeaturedProductsSecti
 import { TrustBanner } from '@/components/home/TrustBanner';
 import { EscrowExplainer } from '@/components/home/EscrowExplainer';
 import { BecomeFarmerCTA } from '@/components/home/BecomeFarmerCTA';
+import { LocationBanner } from '@/components/home/LocationBanner';
+import { LocationSelectionModal } from '@/components/home/LocationSelectionModal';
 
 const Index = () => {
   return (
     <Layout>
+      <LocationBanner />
+      <LocationSelectionModal />
       <BannerCarousel />
       <TrustBanner />
       <CategoryGrid />
