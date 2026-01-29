@@ -810,10 +810,8 @@ export type Database = {
           farm_name: string | null
           farm_size: string | null
           id: string | null
-          pending_payout: number | null
           produce_types: string[] | null
           state: string | null
-          total_earnings: number | null
           updated_at: string | null
           user_id: string | null
           verification_status:
@@ -828,10 +826,8 @@ export type Database = {
           farm_name?: string | null
           farm_size?: string | null
           id?: string | null
-          pending_payout?: number | null
           produce_types?: string[] | null
           state?: string | null
-          total_earnings?: number | null
           updated_at?: string | null
           user_id?: string | null
           verification_status?:
@@ -846,10 +842,8 @@ export type Database = {
           farm_name?: string | null
           farm_size?: string | null
           id?: string | null
-          pending_payout?: number | null
           produce_types?: string[] | null
           state?: string | null
-          total_earnings?: number | null
           updated_at?: string | null
           user_id?: string | null
           verification_status?:
