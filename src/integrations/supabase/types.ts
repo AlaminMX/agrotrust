@@ -862,6 +862,23 @@ export type Database = {
     }
     Functions: {
       get_farmer_profile_id: { Args: { _user_id: string }; Returns: string }
+      get_public_farmer_info: {
+        Args: { _farmer_id: string }
+        Returns: {
+          address: string
+          created_at: string
+          farm_description: string
+          farm_name: string
+          farm_size: string
+          id: string
+          produce_types: string[]
+          state: string
+          updated_at: string
+          user_id: string
+          verification_status: Database["public"]["Enums"]["verification_status"]
+          verified_at: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
