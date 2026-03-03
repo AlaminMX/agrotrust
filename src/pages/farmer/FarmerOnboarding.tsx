@@ -63,6 +63,7 @@ export default function FarmerOnboarding() {
   const [address, setAddress] = useState('');
   const [farmSize, setFarmSize] = useState('');
   const [produceTypes, setProduceTypes] = useState<string[]>([]);
+  const [whatsappPhone, setWhatsappPhone] = useState('');
   
   // Bank details
   const [bankCode, setBankCode] = useState('');
@@ -238,6 +239,7 @@ export default function FarmerOnboarding() {
           address: address,
           farm_size: farmSize,
           produce_types: produceTypes,
+          whatsapp_phone: whatsappPhone || null,
           id_document_url: idDocUrl,
           farm_registration_url: farmRegUrl,
           verification_status: 'pending',
@@ -457,6 +459,18 @@ export default function FarmerOnboarding() {
                   />
                 </div>
                 
+                <div className="space-y-2">
+                  <Label htmlFor="whatsappPhone">WhatsApp Phone *</Label>
+                  <Input
+                    id="whatsappPhone"
+                    placeholder="e.g., 08012345678"
+                    value={whatsappPhone}
+                    onChange={(e) => setWhatsappPhone(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">Used for order updates and quick communication.</p>
+                </div>
+
                 <div className="space-y-3">
                   <Label>What do you produce? *</Label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -478,7 +492,7 @@ export default function FarmerOnboarding() {
                 <div className="flex justify-end pt-4">
                   <Button 
                     onClick={() => setStep('bank')}
-                    disabled={!farmName || !state || !address || produceTypes.length === 0 || (state === 'abuja' && !areaId)}
+                    disabled={!farmName || !state || !address || !whatsappPhone || produceTypes.length === 0 || (state === 'abuja' && !areaId)}
                   >
                     Continue <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
