@@ -16,26 +16,14 @@ import { supabase } from '@/integrations/supabase/client';
 type SortOption = 'newest' | 'price-low' | 'price-high' | 'rating';
 
 interface DatabaseProduct {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  unit: string;
-  category: string;
-  image_url: string | null;
-  available_quantity: number;
-  average_rating: number | null;
-  review_count: number | null;
-  state: string | null;
+  id: string; name: string; description: string | null; price: number; unit: string;
+  category: string; image_url: string | null; available_quantity: number;
+  average_rating: number | null; review_count: number | null; state: string | null;
   farmer_id: string;
 }
 
 interface FarmerPublicProfile {
-  id: string;
-  farm_name: string;
-  state: string;
-  verification_status: string;
-  user_id: string;
+  id: string; farm_name: string; state: string; verification_status: string; user_id: string;
 }
 
 interface ProductWithFarmer extends DatabaseProduct {
@@ -44,231 +32,109 @@ interface ProductWithFarmer extends DatabaseProduct {
 
 const Products = () => {
   const [searchParams] = useSearchParams();
-  const { selectedState, setSelectedState, items, clearCart } = useCart();
+  const { selectedState, setSelectedState } = useCart();
   const [category, setCategory] = useState<ProductCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [products, setProducts] = useState<ProductWithFarmer[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Advanced filters
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [minRating, setMinRating] = useState<number | null>(null);
 
-  // Handle state from URL params (from onboarding)
   useEffect(() => {
     const stateParam = searchParams.get('state') as State;
     if (stateParam && STATES.some(s => s.value === stateParam)) {
       setSelectedState(stateParam);
     }
+    const searchParam = searchParams.get('search');
+    if (searchParam) setSearchQuery(searchParam);
+    const categoryParam = searchParams.get('category');
+    if (categoryParam) setCategory(categoryParam as ProductCategory);
   }, [searchParams, setSelectedState]);
 
-  // Fetch products from database
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
-      
-      // First fetch products
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          description,
-          price,
-          unit,
-          category,
-          image_url,
-          available_quantity,
-          average_rating,
-          review_count,
-          state,
-          farmer_id
-        `)
+      const { data: productsData, error } = await supabase
+        .from('products').select('id, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
         .eq('is_active', true);
 
-      if (productsError) {
-        console.error('Error fetching products:', productsError);
-        toast.error('Failed to load products');
-        setLoading(false);
-        return;
-      }
+      if (error) { console.error(error); toast.error('Failed to load listings'); setLoading(false); return; }
+      if (!productsData?.length) { setProducts([]); setLoading(false); return; }
 
-      if (!productsData || productsData.length === 0) {
-        setProducts([]);
-        setLoading(false);
-        return;
-      }
-
-      // Get unique farmer IDs
       const farmerIds = [...new Set(productsData.map(p => p.farmer_id))];
-      
-      // Fetch farmer data from public view (safe - no sensitive data)
-      const { data: farmersData } = await supabase
-        .from('farmer_profiles_public')
-        .select('id, farm_name, state, verification_status, user_id')
-        .in('id', farmerIds)
-        .eq('verification_status', 'approved');
+      const { data: farmersData } = await supabase.from('farmer_profiles_public')
+        .select('id, farm_name, state, verification_status, user_id').in('id', farmerIds).eq('verification_status', 'approved');
 
-      // Create farmer lookup map
       const farmerMap = new Map<string, FarmerPublicProfile>();
-      farmersData?.forEach(farmer => {
-        farmerMap.set(farmer.id, farmer as FarmerPublicProfile);
-      });
+      farmersData?.forEach(f => farmerMap.set(f.id, f as FarmerPublicProfile));
 
-      // Combine products with farmer data, filtering to only approved farmers
-      const productsWithFarmers: ProductWithFarmer[] = productsData
-        .filter(product => farmerMap.has(product.farmer_id))
-        .map(product => ({
-          ...product,
-          farmer: farmerMap.get(product.farmer_id)
-        }));
-
-      setProducts(productsWithFarmers);
+      setProducts(productsData.filter(p => farmerMap.has(p.farmer_id)).map(p => ({ ...p, farmer: farmerMap.get(p.farmer_id) })));
       setLoading(false);
     };
-
     fetchProducts();
   }, []);
 
-  const handleStateChange = (newState: State) => {
-    if (items.length > 0 && newState !== selectedState && newState !== 'all' && selectedState !== 'all') {
-      clearCart();
-      toast.info('Cart cleared', { 
-        description: 'Your cart was cleared because you changed your delivery location.' 
-      });
-    }
-    setSelectedState(newState);
-  };
-
-  const clearFilters = () => {
-    setMinPrice('');
-    setMaxPrice('');
-    setMinRating(null);
-  };
-
-  const activeFiltersCount = [
-    minPrice !== '',
-    maxPrice !== '',
-    minRating !== null,
-  ].filter(Boolean).length;
+  const handleStateChange = (newState: State) => { setSelectedState(newState); };
+  const clearFilters = () => { setMinPrice(''); setMaxPrice(''); setMinRating(null); };
+  const activeFiltersCount = [minPrice !== '', maxPrice !== '', minRating !== null].filter(Boolean).length;
 
   const filteredProducts = useMemo(() => {
-    const filtered = products.filter(product => {
-      if (!product.farmer) return false;
-      
-      // Use product.state or fall back to farmer's state
-      const productState = product.state || product.farmer.state;
-      
-      // Location filter - if 'all' is selected, show all products
+    return products.filter(p => {
+      if (!p.farmer) return false;
+      const productState = p.state || p.farmer.state;
       const matchesState = selectedState === 'all' || productState === selectedState;
-      
-      const matchesCategory = category === 'all' || product.category === category;
-      const matchesSearch = searchQuery === '' || 
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.farmer.farm_name.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      // Price filter
-      const minPriceNum = minPrice ? parseFloat(minPrice) : 0;
-      const maxPriceNum = maxPrice ? parseFloat(maxPrice) : Infinity;
-      const matchesPrice = product.price >= minPriceNum && product.price <= maxPriceNum;
-      
-      // Rating filter
-      const productRating = product.average_rating || 0;
-      const matchesRating = minRating === null || productRating >= minRating;
-      
+      const matchesCategory = category === 'all' || p.category === category;
+      const matchesSearch = searchQuery === '' || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.farmer.farm_name.toLowerCase().includes(searchQuery.toLowerCase());
+      const minP = minPrice ? parseFloat(minPrice) : 0;
+      const maxP = maxPrice ? parseFloat(maxPrice) : Infinity;
+      const matchesPrice = p.price >= minP && p.price <= maxP;
+      const matchesRating = minRating === null || (p.average_rating || 0) >= minRating;
       return matchesState && matchesCategory && matchesSearch && matchesPrice && matchesRating;
-    });
-
-    // Apply sorting
-    return [...filtered].sort((a, b) => {
+    }).sort((a, b) => {
       switch (sortBy) {
-        case 'price-low':
-          return a.price - b.price;
-        case 'price-high':
-          return b.price - a.price;
-        case 'rating':
-          return (b.average_rating || 0) - (a.average_rating || 0);
-        case 'newest':
-        default:
-          return 0; // Keep original order (newest first from DB)
+        case 'price-low': return a.price - b.price;
+        case 'price-high': return b.price - a.price;
+        case 'rating': return (b.average_rating || 0) - (a.average_rating || 0);
+        default: return 0;
       }
     });
   }, [products, selectedState, category, searchQuery, sortBy, minPrice, maxPrice, minRating]);
 
-  // Transform database products to the format expected by ProductCard
-  const transformedProducts = useMemo(() => {
-    return filteredProducts.map(product => ({
-      id: product.id,
-      name: product.name,
-      description: product.description || '',
-      price: product.price,
-      unit: product.unit,
-      category: product.category as ProductCategory,
-      image: product.image_url || '/placeholder.svg',
-      farmerId: product.farmer!.id,
-      farmerName: product.farmer!.farm_name,
-      farmName: product.farmer!.farm_name,
-      state: (product.state || product.farmer!.state) as State,
-      available: product.available_quantity,
-      rating: product.average_rating || 0,
-      reviewCount: product.review_count || 0,
-      isVerified: product.farmer!.verification_status === 'approved',
-    }));
-  }, [filteredProducts]);
-
-  // Determine if we should show state on product cards (when "All" is selected)
-  const showStateOnCards = selectedState === 'all';
+  const transformedProducts = useMemo(() => filteredProducts.map(p => ({
+    id: p.id, name: p.name, description: p.description || '', price: p.price, unit: p.unit,
+    category: p.category as ProductCategory, image: p.image_url || '/placeholder.svg',
+    farmerId: p.farmer!.id, farmerName: p.farmer!.farm_name, farmName: p.farmer!.farm_name,
+    state: (p.state || p.farmer!.state) as State, available: p.available_quantity,
+    rating: p.average_rating || 0, reviewCount: p.review_count || 0,
+    isVerified: p.farmer!.verification_status === 'approved',
+  })), [filteredProducts]);
 
   return (
     <Layout>
       <div className="bg-muted/30 py-8">
         <div className="container">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Browse Products</h1>
-          <p className="text-muted-foreground">Fresh produce from verified farmers near you</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Browse Listings</h1>
+          <p className="text-muted-foreground">Connect directly with verified farmers across Nigeria</p>
         </div>
       </div>
-
       <div className="container py-8">
-        {/* State Banner */}
-        <StateBanner 
-          selectedState={selectedState} 
-          onStateChange={handleStateChange}
-          hasItemsInCart={items.length > 0}
-        />
-
+        <StateBanner selectedState={selectedState} onStateChange={handleStateChange} />
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Filters Sidebar */}
-          <ProductFilters
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            minRating={minRating}
-            onMinPriceChange={setMinPrice}
-            onMaxPriceChange={setMaxPrice}
-            onMinRatingChange={setMinRating}
-            onClearFilters={clearFilters}
-            activeFiltersCount={activeFiltersCount}
-          />
-
-          {/* Main Content */}
+          <ProductFilters minPrice={minPrice} maxPrice={maxPrice} minRating={minRating}
+            onMinPriceChange={setMinPrice} onMaxPriceChange={setMaxPrice}
+            onMinRatingChange={setMinRating} onClearFilters={clearFilters} activeFiltersCount={activeFiltersCount} />
           <div className="flex-1">
-            {/* Search, Sort & Category */}
             <div className="space-y-4 mb-6">
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search products or farms..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
+                  <Input placeholder="Search listings or farms..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
                 </div>
-                <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+                <Select value={sortBy} onValueChange={(v: SortOption) => setSortBy(v)}>
                   <SelectTrigger className="w-full sm:w-[180px]">
-                    <ArrowUpDown className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Sort by" />
+                    <ArrowUpDown className="h-4 w-4 mr-2" /><SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="newest">Newest</SelectItem>
@@ -280,26 +146,16 @@ const Products = () => {
               </div>
               <CategoryFilter selected={category} onChange={setCategory} />
             </div>
-
-            {/* Products Grid */}
             {loading ? (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
+              <div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
             ) : transformedProducts.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {transformedProducts.map(product => (
-                  <ProductCard key={product.id} product={product} showState={showStateOnCards} />
-                ))}
+                {transformedProducts.map(p => <ProductCard key={p.id} product={p} showState={selectedState === 'all'} />)}
               </div>
             ) : (
               <div className="text-center py-16">
-                <p className="text-lg text-muted-foreground mb-2">No products found</p>
-                <p className="text-sm text-muted-foreground">
-                  {products.length === 0 
-                    ? 'No products have been listed yet. Check back soon!'
-                    : 'Try adjusting your filters or search query'}
-                </p>
+                <p className="text-lg text-muted-foreground mb-2">No listings found</p>
+                <p className="text-sm text-muted-foreground">Try adjusting your filters or search query</p>
               </div>
             )}
           </div>

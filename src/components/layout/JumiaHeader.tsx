@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, HelpCircle, ChevronDown, Search, Menu, X, Leaf, Store, LogOut, Plus } from 'lucide-react';
+import { User, HelpCircle, ChevronDown, Search, Menu, X, Leaf, Store, LogOut, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,25 +27,18 @@ const categories = [
 ];
 
 export const JumiaHeader = () => {
-  const { items, totalItems, selectedState, setSelectedState } = useCart();
+  const { selectedState, setSelectedState } = useCart();
   const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUserRoles = async () => {
-      if (!user) {
-        setUserRoles([]);
-        return;
-      }
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
+      if (!user) { setUserRoles([]); return; }
+      const { data } = await supabase.from('user_roles').select('role').eq('user_id', user.id);
       setUserRoles(data?.map(r => r.role) || []);
     };
     fetchUserRoles();
@@ -62,8 +55,6 @@ export const JumiaHeader = () => {
     }
   };
 
-  const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-
   return (
     <header className="sticky top-0 z-50 w-full bg-card shadow-sm">
       {/* Top Bar */}
@@ -72,7 +63,7 @@ export const JumiaHeader = () => {
           <div className="flex items-center gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-1 hover:opacity-80 transition-opacity">
-                📍 {STATES.find(s => s.value === selectedState)?.label || 'Select State'}
+                📍 {STATES.find(s => s.value === selectedState)?.label || 'All Nigeria'}
                 <ChevronDown className="h-3 w-3" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="bg-card">
@@ -92,23 +83,12 @@ export const JumiaHeader = () => {
           <div className="hidden md:flex items-center gap-4">
             <Link to="/farmer/onboarding" className="flex items-center gap-1 hover:opacity-80 transition-opacity">
               <Store className="h-3 w-3" />
-              Sell on AgroTrust
+              List on AgroTrust
             </Link>
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 hover:opacity-80 transition-opacity">
-                <HelpCircle className="h-3 w-3" />
-                Help
-                <ChevronDown className="h-3 w-3" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-card">
-                <DropdownMenuItem asChild>
-                  <Link to="/how-it-works">How It Works</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/track-order">Track Order</Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Link to="/how-it-works" className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+              <HelpCircle className="h-3 w-3" />
+              How It Works
+            </Link>
           </div>
         </div>
       </div>
@@ -116,17 +96,10 @@ export const JumiaHeader = () => {
       {/* Main Header */}
       <div className="container py-3">
         <div className="flex items-center gap-4">
-          {/* Mobile Menu Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
 
-          {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
               <Leaf className="h-6 w-6 text-primary-foreground" />
@@ -141,53 +114,28 @@ export const JumiaHeader = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products, farms..."
+                placeholder="Search produce, farmers, categories..."
                 className="w-full h-11 pl-4 pr-12 rounded-lg border-2 border-orange bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-orange-dark"
               />
-              <button
-                type="submit"
-                className="absolute right-0 top-0 h-11 w-12 flex items-center justify-center bg-orange rounded-r-lg hover:bg-orange-dark transition-colors"
-              >
+              <button type="submit" className="absolute right-0 top-0 h-11 w-12 flex items-center justify-center bg-orange rounded-r-lg hover:bg-orange-dark transition-colors">
                 <Search className="h-5 w-5 text-white" />
               </button>
             </div>
           </form>
 
-          {/* Search Icon - Mobile */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setIsSearchOpen(!isSearchOpen)}
-          >
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSearchOpen(!isSearchOpen)}>
             <Search className="h-5 w-5" />
           </Button>
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
-            {/* Farmer Upload Product - Visible for farmers on desktop only */}
             {isFarmer && (
-              <Link 
-                to="/farmer/products/add" 
-                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-              >
+              <Link to="/farmer/products/add" className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
                 <Plus className="h-4 w-4" />
-                Upload Product
+                Add Listing
               </Link>
             )}
 
-            {/* Profile Link - Visible for non-admins and non-farmers only on desktop */}
-            {user && !isAdmin && !isFarmer && (
-              <Link 
-                to="/profile" 
-                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-foreground hover:text-primary transition-colors"
-              >
-                <User className="h-4 w-4" />
-                My Profile
-              </Link>
-            )}
-
-            {/* Account */}
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -202,17 +150,12 @@ export const JumiaHeader = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 bg-card">
                   {!isAdmin && (
-                    <>
-                      <DropdownMenuItem asChild>
-                        <Link to="/profile" className="flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          My Account
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/profile">Orders</Link>
-                      </DropdownMenuItem>
-                    </>
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile" className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        My Account
+                      </Link>
+                    </DropdownMenuItem>
                   )}
                   {isAdmin && (
                     <DropdownMenuItem asChild>
@@ -227,7 +170,7 @@ export const JumiaHeader = () => {
                       <DropdownMenuItem asChild>
                         <Link to="/farmer/products/add" className="flex items-center gap-2">
                           <Plus className="h-4 w-4" />
-                          Upload Product
+                          Add Listing
                         </Link>
                       </DropdownMenuItem>
                     </>
@@ -262,84 +205,12 @@ export const JumiaHeader = () => {
               </Button>
             )}
 
-            {/* Visible Sign Out Button */}
             {user && (
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={signOut}
-                className="hidden lg:flex items-center gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
-              >
+              <Button variant="ghost" size="sm" onClick={signOut} className="hidden lg:flex items-center gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10">
                 <LogOut className="h-4 w-4" />
                 Sign Out
               </Button>
             )}
-
-            {/* Cart */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative flex items-center gap-2 h-11">
-                  <div className="relative">
-                    <ShoppingCart className="h-5 w-5" />
-                    {totalItems > 0 && (
-                      <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-orange text-xs font-bold text-white">
-                        {totalItems}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-left hidden md:block">
-                    <p className="text-xs text-muted-foreground">Cart</p>
-                    <p className="text-sm font-medium text-foreground">₦{subtotal.toLocaleString()}</p>
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80 bg-card p-4">
-                {items.length === 0 ? (
-                  <div className="text-center py-6">
-                    <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-muted-foreground">Your cart is empty</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="max-h-64 overflow-auto space-y-3">
-                      {items.slice(0, 3).map(({ product, quantity }) => (
-                        <div key={product.id} className="flex gap-3">
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="w-14 h-14 rounded object-cover"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground line-clamp-1">{product.name}</p>
-                            <p className="text-xs text-muted-foreground">Qty: {quantity}</p>
-                            <p className="text-sm font-semibold text-orange">₦{(product.price * quantity).toLocaleString()}</p>
-                          </div>
-                        </div>
-                      ))}
-                      {items.length > 3 && (
-                        <p className="text-sm text-muted-foreground text-center">
-                          +{items.length - 3} more items
-                        </p>
-                      )}
-                    </div>
-                    <div className="border-t border-border mt-4 pt-4">
-                      <div className="flex justify-between mb-4">
-                        <span className="font-medium text-foreground">Subtotal</span>
-                        <span className="font-bold text-foreground">₦{subtotal.toLocaleString()}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" className="flex-1" asChild>
-                          <Link to="/cart">View Cart</Link>
-                        </Button>
-                        <Button className="flex-1 bg-orange hover:bg-orange-dark" asChild>
-                          <Link to="/checkout">Checkout</Link>
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
       </div>
@@ -352,10 +223,7 @@ export const JumiaHeader = () => {
               <Link
                 key={category.value}
                 to={`/products?category=${category.value}`}
-                className={cn(
-                  "flex items-center gap-1.5 px-4 h-full text-sm font-medium transition-colors whitespace-nowrap",
-                  "text-foreground hover:text-orange hover:bg-orange/5"
-                )}
+                className="flex items-center gap-1.5 px-4 h-full text-sm font-medium transition-colors whitespace-nowrap text-foreground hover:text-orange hover:bg-orange/5"
               >
                 <span>{category.icon}</span>
                 {category.label}
@@ -369,18 +237,11 @@ export const JumiaHeader = () => {
       {isSearchOpen && (
         <div className="md:hidden border-t border-border bg-card p-3">
           <form onSubmit={handleSearch} className="relative flex">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search products, farms..."
-              autoFocus
+            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search produce, farmers..." autoFocus
               className="w-full h-10 pl-4 pr-12 rounded-lg border-2 border-orange bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-orange-dark"
             />
-            <button
-              type="submit"
-              className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center bg-orange rounded-r-lg hover:bg-orange-dark transition-colors"
-            >
+            <button type="submit" className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center bg-orange rounded-r-lg hover:bg-orange-dark transition-colors">
               <Search className="h-4 w-4 text-white" />
             </button>
           </form>
@@ -391,110 +252,49 @@ export const JumiaHeader = () => {
       {isMenuOpen && (
         <div className="lg:hidden border-t border-border bg-card">
           <nav className="container py-4 space-y-4">
-            {/* User links for mobile */}
             {user && (
               <div className="space-y-2">
                 <div className="flex gap-2">
-                  {/* Profile - hidden for farmers (they use bottom nav) */}
                   {!isAdmin && !isFarmer && (
-                    <Link 
-                      to="/profile" 
-                      onClick={() => setIsMenuOpen(false)}
-                      className="flex-1"
-                    >
-                      <Button variant="outline" className="w-full">
-                        <User className="h-4 w-4 mr-2" />
-                        My Profile
-                      </Button>
+                    <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="flex-1">
+                      <Button variant="outline" className="w-full"><User className="h-4 w-4 mr-2" />My Profile</Button>
                     </Link>
                   )}
                   {isAdmin && (
-                    <Link 
-                      to="/admin" 
-                      onClick={() => setIsMenuOpen(false)}
-                      className="flex-1"
-                    >
-                      <Button variant="outline" className="w-full">
-                        Admin Dashboard
-                      </Button>
+                    <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="flex-1">
+                      <Button variant="outline" className="w-full">Admin Dashboard</Button>
                     </Link>
                   )}
-                  {/* Farmer dashboard link in mobile menu */}
                   {isFarmer && (
-                    <Link 
-                      to="/farmer/dashboard" 
-                      onClick={() => setIsMenuOpen(false)}
-                      className="flex-1"
-                    >
-                      <Button variant="outline" className="w-full">
-                        <Store className="h-4 w-4 mr-2" />
-                        Farmer Dashboard
-                      </Button>
-                    </Link>
-                  )}
-                  {/* Become a Farmer - only for non-farmers */}
-                  {!isFarmer && !isAdmin && (
-                    <Link 
-                      to="/farmer/onboarding" 
-                      onClick={() => setIsMenuOpen(false)}
-                      className="flex-1"
-                    >
-                      <Button className="w-full bg-primary">
-                        <Store className="h-4 w-4 mr-2" />
-                        Become a Farmer
-                      </Button>
+                    <Link to="/farmer/dashboard" onClick={() => setIsMenuOpen(false)} className="flex-1">
+                      <Button variant="outline" className="w-full">Farmer Dashboard</Button>
                     </Link>
                   )}
                 </div>
-                {/* Sign Out Button */}
-                <Button 
-                  variant="outline" 
-                  className="w-full text-destructive border-destructive/30 hover:bg-destructive/10"
-                  onClick={() => {
-                    signOut();
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </Button>
+                {isFarmer && (
+                  <Link to="/farmer/products/add" onClick={() => setIsMenuOpen(false)}>
+                    <Button className="w-full"><Plus className="h-4 w-4 mr-2" />Add Listing</Button>
+                  </Link>
+                )}
               </div>
             )}
 
-            {/* Categories */}
             <div className="grid grid-cols-2 gap-2">
               {categories.map(category => (
-                <Link
-                  key={category.value}
-                  to={`/products?category=${category.value}`}
+                <Link key={category.value} to={`/products?category=${category.value}`}
                   onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                >
-                  <span className="text-lg">{category.icon}</span>
-                  <span className="text-sm font-medium text-foreground">{category.label}</span>
+                  className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg bg-muted hover:bg-muted/80 transition-colors">
+                  <span>{category.icon}</span>
+                  {category.label}
                 </Link>
               ))}
             </div>
 
-            {/* Bottom actions */}
-            <div className="pt-4 border-t border-border space-y-2">
-              {!user && (
-                <>
-                  <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                    <Button className="w-full">Sign In / Register</Button>
-                  </Link>
-                  <Link to="/farmer/onboarding" onClick={() => setIsMenuOpen(false)}>
-                    <Button variant="outline" className="w-full border-primary text-primary">
-                      <Store className="h-4 w-4 mr-2" />
-                      Sell on AgroTrust
-                    </Button>
-                  </Link>
-                </>
-              )}
-              <Link to="/how-it-works" onClick={() => setIsMenuOpen(false)}>
-                <Button variant="ghost" className="w-full">How It Works</Button>
+            {!user && (
+              <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                <Button className="w-full">Sign In / Register</Button>
               </Link>
-            </div>
+            )}
           </nav>
         </div>
       )}

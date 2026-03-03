@@ -289,6 +289,7 @@ export type Database = {
           paystack_recipient_code: string | null
           pending_payout: number | null
           produce_types: string[] | null
+          secondary_phone: string | null
           state: string
           total_earnings: number | null
           updated_at: string
@@ -296,6 +297,8 @@ export type Database = {
           verification_notes: string | null
           verification_status: Database["public"]["Enums"]["verification_status"]
           verified_at: string | null
+          whatsapp_phone: string | null
+          years_of_experience: number | null
         }
         Insert: {
           address?: string | null
@@ -315,6 +318,7 @@ export type Database = {
           paystack_recipient_code?: string | null
           pending_payout?: number | null
           produce_types?: string[] | null
+          secondary_phone?: string | null
           state: string
           total_earnings?: number | null
           updated_at?: string
@@ -322,6 +326,8 @@ export type Database = {
           verification_notes?: string | null
           verification_status?: Database["public"]["Enums"]["verification_status"]
           verified_at?: string | null
+          whatsapp_phone?: string | null
+          years_of_experience?: number | null
         }
         Update: {
           address?: string | null
@@ -341,6 +347,7 @@ export type Database = {
           paystack_recipient_code?: string | null
           pending_payout?: number | null
           produce_types?: string[] | null
+          secondary_phone?: string | null
           state?: string
           total_earnings?: number | null
           updated_at?: string
@@ -348,6 +355,8 @@ export type Database = {
           verification_notes?: string | null
           verification_status?: Database["public"]["Enums"]["verification_status"]
           verified_at?: string | null
+          whatsapp_phone?: string | null
+          years_of_experience?: number | null
         }
         Relationships: [
           {
@@ -617,6 +626,8 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          is_negotiable: boolean
+          listing_status: string
           name: string
           original_price: number | null
           price: number
@@ -637,6 +648,8 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_negotiable?: boolean
+          listing_status?: string
           name: string
           original_price?: number | null
           price: number
@@ -657,6 +670,8 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_negotiable?: boolean
+          listing_status?: string
           name?: string
           original_price?: number | null
           price?: number
@@ -805,12 +820,14 @@ export type Database = {
       farmer_profiles_public: {
         Row: {
           address: string | null
+          allows_pickup: boolean | null
           created_at: string | null
           farm_description: string | null
           farm_name: string | null
           farm_size: string | null
           id: string | null
           produce_types: string[] | null
+          secondary_phone: string | null
           state: string | null
           updated_at: string | null
           user_id: string | null
@@ -818,15 +835,19 @@ export type Database = {
             | Database["public"]["Enums"]["verification_status"]
             | null
           verified_at: string | null
+          whatsapp_phone: string | null
+          years_of_experience: number | null
         }
         Insert: {
           address?: string | null
+          allows_pickup?: boolean | null
           created_at?: string | null
           farm_description?: string | null
           farm_name?: string | null
           farm_size?: string | null
           id?: string | null
           produce_types?: string[] | null
+          secondary_phone?: string | null
           state?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -834,15 +855,19 @@ export type Database = {
             | Database["public"]["Enums"]["verification_status"]
             | null
           verified_at?: string | null
+          whatsapp_phone?: string | null
+          years_of_experience?: number | null
         }
         Update: {
           address?: string | null
+          allows_pickup?: boolean | null
           created_at?: string | null
           farm_description?: string | null
           farm_name?: string | null
           farm_size?: string | null
           id?: string | null
           produce_types?: string[] | null
+          secondary_phone?: string | null
           state?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -850,6 +875,8 @@ export type Database = {
             | Database["public"]["Enums"]["verification_status"]
             | null
           verified_at?: string | null
+          whatsapp_phone?: string | null
+          years_of_experience?: number | null
         }
         Relationships: []
       }
@@ -866,11 +893,14 @@ export type Database = {
           farm_size: string
           id: string
           produce_types: string[]
+          secondary_phone: string
           state: string
           updated_at: string
           user_id: string
           verification_status: Database["public"]["Enums"]["verification_status"]
           verified_at: string
+          whatsapp_phone: string
+          years_of_experience: number
         }[]
       }
       has_role: {
