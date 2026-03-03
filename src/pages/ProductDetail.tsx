@@ -3,12 +3,10 @@ import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { BackButton } from '@/components/ui/BackButton';
-import { useCart } from '@/context/CartContext';
 import { formatPrice, formatDate } from '@/lib/format';
 import { STATES, Product, State } from '@/types';
-import { Star, MapPin, Minus, Plus, ShoppingCart, Calendar, Loader2 } from 'lucide-react';
+import { Star, MapPin, Calendar, Loader2, MessageCircle, Phone } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
 import { ProductReviews } from '@/components/reviews/ProductReviews';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -25,6 +23,8 @@ interface DatabaseProduct {
   review_count: number | null;
   state: string | null;
   farmer_id: string;
+  is_negotiable: boolean;
+  listing_status: string;
 }
 
 interface FarmerProfile {
@@ -35,26 +35,28 @@ interface FarmerProfile {
   farm_description: string | null;
   user_id: string;
   created_at: string;
+  whatsapp_phone: string | null;
+  secondary_phone: string | null;
+  years_of_experience: number | null;
+  farm_size: string | null;
+  address: string | null;
   full_name?: string;
   avatar_url?: string;
+  phone?: string;
 }
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const { addToCart } = useCart();
-  const { toast } = useToast();
-  const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [product, setProduct] = useState<Product | null>(null);
   const [farmer, setFarmer] = useState<FarmerProfile | null>(null);
+  const [isNegotiable, setIsNegotiable] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
       if (!id) return;
-      
       setLoading(true);
       try {
-        // First fetch the product
         const { data: productData, error: productError } = await supabase
           .from('products')
           .select('*')
@@ -62,70 +64,56 @@ const ProductDetail = () => {
           .maybeSingle();
 
         if (productError) throw productError;
-        if (!productData) {
-          setLoading(false);
-          return;
-        }
+        if (!productData) { setLoading(false); return; }
         
         const dbProduct = productData as DatabaseProduct;
+        setIsNegotiable(dbProduct.is_negotiable);
         
-        // Fetch farmer data from public view (safe - no sensitive data)
         const { data: farmerData } = await supabase
           .from('farmer_profiles_public')
-          .select('id, farm_name, state, verification_status, farm_description, user_id, created_at')
+          .select('id, farm_name, state, verification_status, farm_description, user_id, created_at, whatsapp_phone, secondary_phone, years_of_experience, farm_size, address')
           .eq('id', dbProduct.farmer_id)
           .maybeSingle();
 
-        // Get farmer's profile info (name, avatar)
         let farmerName = farmerData?.farm_name || 'Unknown Farm';
         let farmerAvatar = '';
+        let farmerPhone = '';
         
         if (farmerData?.user_id) {
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('full_name, avatar_url')
+            .select('full_name, avatar_url, phone')
             .eq('user_id', farmerData.user_id)
             .maybeSingle();
           
           if (profileData) {
             farmerName = profileData.full_name || farmerData.farm_name;
             farmerAvatar = profileData.avatar_url || '';
+            farmerPhone = profileData.phone || '';
           }
         }
         
-        // Transform to Product type
         const transformedProduct: Product = {
-          id: dbProduct.id,
-          name: dbProduct.name,
-          description: dbProduct.description || '',
-          price: dbProduct.price,
-          unit: dbProduct.unit,
-          category: dbProduct.category,
+          id: dbProduct.id, name: dbProduct.name, description: dbProduct.description || '',
+          price: dbProduct.price, unit: dbProduct.unit, category: dbProduct.category,
           image: dbProduct.image_url || '/placeholder.svg',
           farmerId: farmerData?.id || dbProduct.farmer_id,
-          farmerName: farmerName,
-          farmName: farmerData?.farm_name || 'Unknown Farm',
+          farmerName, farmName: farmerData?.farm_name || 'Unknown Farm',
           state: (dbProduct.state || farmerData?.state || 'kaduna') as State,
           available: dbProduct.available_quantity,
           isVerified: farmerData?.verification_status === 'approved',
-          rating: dbProduct.average_rating || 0,
-          reviewCount: dbProduct.review_count || 0,
+          rating: dbProduct.average_rating || 0, reviewCount: dbProduct.review_count || 0,
         };
         
         setProduct(transformedProduct);
         
         if (farmerData) {
           setFarmer({
-            id: farmerData.id,
-            farm_name: farmerData.farm_name,
-            state: farmerData.state,
-            verification_status: farmerData.verification_status,
-            farm_description: farmerData.farm_description,
-            user_id: farmerData.user_id,
-            created_at: farmerData.created_at,
+            ...farmerData,
             full_name: farmerName,
             avatar_url: farmerAvatar,
-          });
+            phone: farmerPhone,
+          } as FarmerProfile);
         }
       } catch (error) {
         console.error('Error fetching product:', error);
@@ -133,74 +121,49 @@ const ProductDetail = () => {
         setLoading(false);
       }
     };
-
     fetchProduct();
   }, [id]);
 
   if (loading) {
-    return (
-      <Layout>
-        <div className="container py-20 flex justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </Layout>
-    );
+    return <Layout><div className="container py-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></Layout>;
   }
 
   if (!product) {
     return (
       <Layout>
         <div className="container py-20 text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-4">Product Not Found</h1>
-          <p className="text-muted-foreground mb-6">The product you're looking for doesn't exist or has been removed.</p>
-          <Link to="/products">
-            <Button>Browse Products</Button>
-          </Link>
+          <h1 className="text-2xl font-bold text-foreground mb-4">Listing Not Found</h1>
+          <p className="text-muted-foreground mb-6">This listing doesn't exist or has been removed.</p>
+          <Link to="/products"><Button>Browse Listings</Button></Link>
         </div>
       </Layout>
     );
   }
 
   const stateLabel = STATES.find(s => s.value === product.state)?.label || product.state;
-
-  const handleAddToCart = () => {
-    const success = addToCart(product, quantity);
-    if (success) {
-      toast({
-        title: "Added to cart",
-        description: `${quantity}x ${product.name} added to your cart`,
-      });
-    }
-  };
+  const whatsappNumber = farmer?.whatsapp_phone || farmer?.phone || '';
+  const whatsappLink = whatsappNumber ? `https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hi, I'm interested in your listing: ${product.name}`)}` : '';
+  const callNumber = farmer?.phone || farmer?.secondary_phone || '';
 
   return (
     <Layout>
       <div className="container py-8">
-        {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
           <BackButton fallbackPath="/products" />
-          <span>Back to Products</span>
+          <span>Back to Listings</span>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-          {/* Product Image */}
           <div className="aspect-square rounded-2xl overflow-hidden bg-muted">
-            <img
-              src={product.image}
-              alt={product.name}
-              className="h-full w-full object-cover"
-            />
+            <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
           </div>
 
-          {/* Product Info */}
           <div className="space-y-6">
-            {/* Farm Badge */}
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-earth">{product.farmName}</span>
               {product.isVerified && <VerifiedBadge size="sm" />}
             </div>
 
-            {/* Title & Location */}
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-2">{product.name}</h1>
               <div className="flex items-center gap-1 text-muted-foreground">
@@ -209,68 +172,56 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            {/* Rating */}
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
                 {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`h-5 w-5 ${
-                      i < Math.floor(product.rating)
-                        ? 'fill-gold text-gold'
-                        : 'fill-muted text-muted'
-                    }`}
-                  />
+                  <Star key={i} className={`h-5 w-5 ${i < Math.floor(product.rating) ? 'fill-gold text-gold' : 'fill-muted text-muted'}`} />
                 ))}
               </div>
               <span className="font-medium text-foreground">{product.rating.toFixed(1)}</span>
               <span className="text-muted-foreground">({product.reviewCount} reviews)</span>
             </div>
 
-            {/* Price */}
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-foreground">{formatPrice(product.price)}</span>
               <span className="text-lg text-muted-foreground">per {product.unit}</span>
+              {isNegotiable && (
+                <span className="ml-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-sm font-medium">Negotiable</span>
+              )}
             </div>
 
-            {/* Description */}
             <p className="text-muted-foreground">{product.description}</p>
 
-            {/* Availability */}
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">Available:</span>
               <span className="font-medium text-foreground">{product.available} {product.unit}s</span>
             </div>
 
-            {/* Quantity Selector */}
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-medium text-foreground">Quantity:</span>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                  disabled={quantity <= 1}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="w-12 text-center font-medium text-foreground">{quantity}</span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setQuantity(q => Math.min(product.available, q + 1))}
-                  disabled={quantity >= product.available}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+            {/* Contact Farmer Buttons */}
+            <div className="space-y-3 pt-4 border-t border-border">
+              <h3 className="font-semibold text-foreground">Contact Farmer</h3>
+              <div className="flex gap-3">
+                {whatsappLink && (
+                  <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="flex-1">
+                    <Button size="lg" className="w-full bg-green-600 hover:bg-green-700 text-white gap-2">
+                      <MessageCircle className="h-5 w-5" />
+                      WhatsApp
+                    </Button>
+                  </a>
+                )}
+                {callNumber && (
+                  <a href={`tel:${callNumber}`} className="flex-1">
+                    <Button size="lg" variant="outline" className="w-full gap-2">
+                      <Phone className="h-5 w-5" />
+                      Call
+                    </Button>
+                  </a>
+                )}
               </div>
+              {!whatsappLink && !callNumber && (
+                <p className="text-sm text-muted-foreground">Contact details not available. The farmer has not provided contact information yet.</p>
+              )}
             </div>
-
-            {/* Add to Cart */}
-            <Button size="lg" className="w-full" onClick={handleAddToCart}>
-              <ShoppingCart className="mr-2 h-5 w-5" />
-              Add to Cart — {formatPrice(product.price * quantity)}
-            </Button>
 
             {/* Farmer Info */}
             {farmer && (
@@ -279,11 +230,7 @@ const ProductDetail = () => {
                 <div className="flex gap-4">
                   <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
                     {farmer.avatar_url ? (
-                      <img
-                        src={farmer.avatar_url}
-                        alt={farmer.full_name}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={farmer.avatar_url} alt={farmer.full_name} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-2xl font-bold text-primary">
                         {(farmer.full_name || farmer.farm_name).charAt(0).toUpperCase()}
@@ -296,15 +243,11 @@ const ProductDetail = () => {
                       {farmer.verification_status === 'approved' && <VerifiedBadge size="sm" showText={false} />}
                     </div>
                     <p className="text-sm text-earth font-medium">{farmer.farm_name}</p>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {STATES.find(s => s.value === farmer.state)?.label || farmer.state}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        Member since {formatDate(farmer.created_at)}
-                      </span>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                      <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{STATES.find(s => s.value === farmer.state)?.label || farmer.state}</span>
+                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />Member since {formatDate(farmer.created_at)}</span>
+                      {farmer.years_of_experience && <span>{farmer.years_of_experience} years experience</span>}
+                      {farmer.farm_size && <span>Farm size: {farmer.farm_size}</span>}
                     </div>
                   </div>
                 </div>
@@ -316,7 +259,6 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* Reviews Section */}
         <div className="mt-12">
           <ProductReviews productId={product.id} />
         </div>

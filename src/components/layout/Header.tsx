@@ -1,17 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, Menu, X, Leaf, User } from 'lucide-react';
+import { Menu, X, Leaf, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
 const navLinks = [
@@ -21,7 +16,6 @@ const navLinks = [
 ];
 
 export const Header = () => {
-  const { totalItems } = useCart();
   const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userRoles, setUserRoles] = useState<string[]>([]);
@@ -30,40 +24,14 @@ export const Header = () => {
 
   useEffect(() => {
     const fetchUserRoles = async () => {
-      if (!user) {
-        setUserRoles([]);
-        return;
-      }
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
+      if (!user) { setUserRoles([]); return; }
+      const { data } = await supabase.from('user_roles').select('role').eq('user_id', user.id);
       setUserRoles(data?.map(r => r.role) || []);
     };
     fetchUserRoles();
   }, [user]);
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    };
-
-    if (isMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isMenuOpen]);
-
-  // Close menu on route change
-  useEffect(() => {
-    setIsMenuOpen(false);
-  }, [location.pathname]);
+  useEffect(() => { setIsMenuOpen(false); }, [location.pathname]);
 
   const isFarmer = userRoles.includes('farmer');
   const isAdmin = userRoles.includes('admin');
@@ -71,7 +39,6 @@ export const Header = () => {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="container flex h-16 items-center justify-between">
-        {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <Leaf className="h-5 w-5 text-primary-foreground" />
@@ -79,112 +46,49 @@ export const Header = () => {
           <span className="text-xl font-bold text-foreground">AgroTrust</span>
         </Link>
 
-        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-8">
           {navLinks.map(link => (
-            <Link
-              key={link.href}
-              to={link.href}
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                location.pathname === link.href
-                  ? "text-primary"
-                  : "text-muted-foreground"
-              )}
-            >
+            <Link key={link.href} to={link.href}
+              className={cn("text-sm font-medium transition-colors hover:text-primary",
+                location.pathname === link.href ? "text-primary" : "text-muted-foreground")}>
               {link.label}
             </Link>
           ))}
         </nav>
 
-        {/* Actions */}
         <div className="flex items-center gap-3">
-          <Link to="/cart">
-            <Button variant="ghost" size="icon" className="relative">
-              <ShoppingCart className="h-5 w-5" />
-              {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">
-                  {totalItems}
-                </span>
-              )}
-            </Button>
-          </Link>
-
-          {/* User Menu */}
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5" />
-                </Button>
+                <Button variant="ghost" size="icon"><User className="h-5 w-5" /></Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem asChild>
-                  <Link to="/profile">My Profile</Link>
-                </DropdownMenuItem>
-                {isAdmin && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin">Admin Dashboard</Link>
-                  </DropdownMenuItem>
-                )}
-                {isFarmer && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/farmer/dashboard">Farmer Dashboard</Link>
-                  </DropdownMenuItem>
-                )}
-                {!isFarmer && !isAdmin && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/farmer/onboarding">Become a Farmer</Link>
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuItem asChild><Link to="/profile">My Profile</Link></DropdownMenuItem>
+                {isAdmin && <DropdownMenuItem asChild><Link to="/admin">Admin Dashboard</Link></DropdownMenuItem>}
+                {isFarmer && <DropdownMenuItem asChild><Link to="/farmer/dashboard">Farmer Dashboard</Link></DropdownMenuItem>}
+                {!isFarmer && !isAdmin && <DropdownMenuItem asChild><Link to="/farmer/onboarding">Become a Farmer</Link></DropdownMenuItem>}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut}>Sign Out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/auth">Sign In</Link>
-            </Button>
+            <Button variant="outline" size="sm" asChild><Link to="/auth">Sign In</Link></Button>
           )}
-
-          {/* Mobile Menu Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
       </div>
 
-      {/* Mobile Navigation with Backdrop */}
       {isMenuOpen && (
         <>
-          {/* Backdrop overlay - click to close */}
-          <div 
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden"
-            onClick={() => setIsMenuOpen(false)}
-          />
-          {/* Menu content */}
-          <div 
-            ref={menuRef}
-            className="fixed top-16 left-0 right-0 z-50 md:hidden border-b border-border bg-card shadow-lg"
-          >
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden" onClick={() => setIsMenuOpen(false)} />
+          <div ref={menuRef} className="fixed top-16 left-0 right-0 z-50 md:hidden border-b border-border bg-card shadow-lg">
             <nav className="container py-4 flex flex-col gap-3">
               {navLinks.map(link => (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  onClick={() => setIsMenuOpen(false)}
-                  className={cn(
-                    "text-sm font-medium py-2 transition-colors hover:text-primary",
-                    location.pathname === link.href
-                      ? "text-primary"
-                      : "text-muted-foreground"
-                  )}
-                >
+                <Link key={link.href} to={link.href} onClick={() => setIsMenuOpen(false)}
+                  className={cn("text-sm font-medium py-2 transition-colors hover:text-primary",
+                    location.pathname === link.href ? "text-primary" : "text-muted-foreground")}>
                   {link.label}
                 </Link>
               ))}

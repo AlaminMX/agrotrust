@@ -1,26 +1,10 @@
-import { Shield, Truck, Users, Leaf } from 'lucide-react';
+import { Shield, Users, MessageCircle, Leaf } from 'lucide-react';
 
 const trustItems = [
-  {
-    icon: Shield,
-    title: 'Escrow Protection',
-    description: 'Payment held until delivery confirmed',
-  },
-  {
-    icon: Users,
-    title: 'Verified Farmers',
-    description: 'All farmers are vetted and approved',
-  },
-  {
-    icon: Truck,
-    title: 'Platform Delivery',
-    description: 'We handle logistics for you',
-  },
-  {
-    icon: Leaf,
-    title: 'Fresh Produce',
-    description: 'Direct from farm to your table',
-  },
+  { icon: Shield, title: 'Verified Farmers', description: 'All farmers are vetted and approved' },
+  { icon: Users, title: 'Direct Connection', description: 'No middlemen. No hidden fees' },
+  { icon: MessageCircle, title: 'Direct Contact', description: 'Chat directly via WhatsApp or call' },
+  { icon: Leaf, title: 'Fresh Produce', description: 'Direct from farm to your table' },
 ];
 
 export const TrustBanner = () => {
