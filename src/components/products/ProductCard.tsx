@@ -15,7 +15,7 @@ export const ProductCard = ({ product, showState = false }: ProductCardProps) =>
     ? STATES.find(s => s.value === product.state)?.label 
     : null;
 
-  const productUrl = `/products/id/${product.id}`;
+  const productUrl = `/products/${product.state}/${product.slug || product.id}`;
 
   return (
     <Link
