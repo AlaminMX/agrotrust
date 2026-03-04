@@ -15,12 +15,12 @@ const features = [
   {
     icon: Users,
     title: 'Direct Connection',
-    description: 'No middlemen means fairer prices for you and better earnings for farmers. You know exactly where your food comes from.',
+    description: 'Farmers manage their own listings directly, including stock, pricing, and listing status. Buyers can shop confidently with full visibility.',
   },
   {
     icon: Truck,
     title: 'Platform Logistics',
-    description: 'We handle delivery through our trusted logistics partners. Track your order from farm to doorstep in real-time.',
+    description: 'Buyers browse by location to see what can be delivered nearby, while farmers list produce with clear availability and status.',
   },
   {
     icon: Star,
@@ -62,7 +62,7 @@ const HowItWorks = () => {
               How AgroTrust Works
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              A marketplace built on trust, transparency, and fairness. Here's everything you need to know.
+              A trusted produce marketplace for buyers and farmers. Learn how listings, delivery, and protected payments work together.
             </p>
           </div>
         </div>
@@ -125,9 +125,9 @@ const HowItWorks = () => {
       {/* CTA */}
       <section className="py-20">
         <div className="container text-center">
-          <h2 className="text-3xl font-bold text-foreground mb-4">Ready to Get Started?</h2>
+          <h2 className="text-3xl font-bold text-foreground mb-4">Ready to Start Buying or Listing?</h2>
           <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-            Browse fresh produce from verified farmers and experience the AgroTrust difference.
+            Shop fresh produce or join as a farmer to create listings and grow your reach.
           </p>
           <Link to="/products">
             <Button size="lg">Browse Products</Button>

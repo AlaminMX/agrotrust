@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { ProductCard } from '@/components/products/ProductCard';
 import { StateBanner } from '@/components/products/StateBanner';
@@ -12,11 +12,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { logActivity } from '@/lib/activityLogger';
 
 type SortOption = 'newest' | 'price-low' | 'price-high' | 'rating';
 
 interface DatabaseProduct {
-  id: string; name: string; description: string | null; price: number; unit: string;
+  id: string; slug?: string | null; name: string; description: string | null; price: number; unit: string;
   category: string; image_url: string | null; available_quantity: number;
   average_rating: number | null; review_count: number | null; state: string | null;
   farmer_id: string;
@@ -31,6 +32,7 @@ interface ProductWithFarmer extends DatabaseProduct {
 }
 
 const Products = () => {
+  const { state: routeState } = useParams<{ state?: State }>();
   const [searchParams] = useSearchParams();
   const { selectedState, setSelectedState } = useCart();
   const [category, setCategory] = useState<ProductCategory | 'all'>('all');
@@ -43,6 +45,10 @@ const Products = () => {
   const [minRating, setMinRating] = useState<number | null>(null);
 
   useEffect(() => {
+    if (routeState && STATES.some(s => s.value === routeState)) {
+      setSelectedState(routeState);
+      return;
+    }
     const stateParam = searchParams.get('state') as State;
     if (stateParam && STATES.some(s => s.value === stateParam)) {
       setSelectedState(stateParam);
@@ -51,14 +57,37 @@ const Products = () => {
     if (searchParam) setSearchQuery(searchParam);
     const categoryParam = searchParams.get('category');
     if (categoryParam) setCategory(categoryParam as ProductCategory);
-  }, [searchParams, setSelectedState]);
+  }, [routeState, searchParams, setSelectedState]);
+
+  useEffect(() => {
+    const stateLabel = STATES.find((s) => s.value === selectedState)?.label || 'Nigeria';
+    document.title = selectedState === 'all' ? 'Browse Farm Products in Nigeria | AgroTrust' : `Fresh Farm Produce in ${stateLabel} | AgroTrust`;
+  }, [selectedState]);
 
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
-      const { data: productsData, error } = await supabase
-        .from('products').select('id, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
-        .eq('is_active', true);
+      const queryState = (query: ReturnType<typeof supabase.from>) => {
+        return selectedState !== 'all' ? query.eq('state', selectedState) : query;
+      };
+
+      let { data: productsData, error } = await queryState(
+        supabase
+          .from('products')
+          .select('id, slug, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
+          .eq('is_active', true)
+      );
+
+      if (error?.code === '42703' || error?.message?.toLowerCase().includes('slug')) {
+        const fallback = await queryState(
+          supabase
+            .from('products')
+            .select('id, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
+            .eq('is_active', true)
+        );
+        productsData = fallback.data as DatabaseProduct[] | null;
+        error = fallback.error;
+      }
 
       if (error) { console.error(error); toast.error('Failed to load listings'); setLoading(false); return; }
       if (!productsData?.length) { setProducts([]); setLoading(false); return; }
@@ -71,10 +100,11 @@ const Products = () => {
       farmersData?.forEach(f => farmerMap.set(f.id, f as FarmerPublicProfile));
 
       setProducts(productsData.filter(p => farmerMap.has(p.farmer_id)).map(p => ({ ...p, farmer: farmerMap.get(p.farmer_id) })));
+      logActivity('product_feed_loaded', { state: selectedState, metadata: { count: productsData.length } });
       setLoading(false);
     };
     fetchProducts();
-  }, []);
+  }, [selectedState]);
 
   const handleStateChange = (newState: State) => { setSelectedState(newState); };
   const clearFilters = () => { setMinPrice(''); setMaxPrice(''); setMinRating(null); };
@@ -103,7 +133,7 @@ const Products = () => {
   }, [products, selectedState, category, searchQuery, sortBy, minPrice, maxPrice, minRating]);
 
   const transformedProducts = useMemo(() => filteredProducts.map(p => ({
-    id: p.id, name: p.name, description: p.description || '', price: p.price, unit: p.unit,
+    id: p.id, slug: p.slug || undefined, name: p.name, description: p.description || '', price: p.price, unit: p.unit,
     category: p.category as ProductCategory, image: p.image_url || '/placeholder.svg',
     farmerId: p.farmer!.id, farmerName: p.farmer!.farm_name, farmName: p.farmer!.farm_name,
     state: (p.state || p.farmer!.state) as State, available: p.available_quantity,
