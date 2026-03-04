@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { ProductCard } from '@/components/products/ProductCard';
@@ -17,7 +17,7 @@ import { logActivity } from '@/lib/activityLogger';
 type SortOption = 'newest' | 'price-low' | 'price-high' | 'rating';
 
 interface DatabaseProduct {
-  id: string; name: string; description: string | null; price: number; unit: string;
+  id: string; slug: string | null; name: string; description: string | null; price: number; unit: string;
   category: string; image_url: string | null; available_quantity: number;
   average_rating: number | null; review_count: number | null; state: string | null;
   farmer_id: string;
@@ -70,62 +70,18 @@ const Products = () => {
     const fetchProducts = async () => {
       const requestId = ++requestIdRef.current;
       setLoading(true);
-      const queryState = (query: ReturnType<typeof supabase.from>) => {
-        return selectedState !== 'all' ? query.eq('state', selectedState) : query;
-      };
+      let query = supabase
+        .from('products').select('id, slug, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
+        .eq('is_active', true);
 
-      let { data: productsData, error } = await queryState(
-        supabase
-          .from('products')
-          .select('id, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
-          .eq('is_active', true)
-      );
-
-      // Some environments can fail on state-filtered queries (schema mismatch / stale caches / policy differences).
-      // Retry safely without state filter and apply state constraint in-memory.
-      if (error && selectedState !== 'all') {
-        const fallback = await supabase
-          .from('products')
-          .select('id, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
-          .eq('is_active', true);
-
-        if (!fallback.error && fallback.data) {
-          productsData = fallback.data.filter((p) => p.state === selectedState);
-          error = null;
-        }
+      if (selectedState !== 'all') {
+        query = query.eq('state', selectedState);
       }
 
-      // Final compatibility retry for legacy schema responses.
-      if (error?.code === '42703') {
-        const fallback = await queryState(
-          supabase
-            .from('products')
-            .select('id, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
-            .eq('is_active', true)
-        );
-        productsData = fallback.data as DatabaseProduct[] | null;
-        error = fallback.error;
-      }
+      const { data: productsData, error } = await query;
 
-      if (requestId !== requestIdRef.current) return;
-
-      if (error) {
-        console.error(error);
-        if (lastToastStateRef.current !== selectedState) {
-          toast.error('Failed to load listings');
-          lastToastStateRef.current = selectedState;
-        }
-        setLoading(false);
-        return;
-      }
-
-      lastToastStateRef.current = null;
-
-      if (!productsData?.length) {
-        setProducts([]);
-        setLoading(false);
-        return;
-      }
+      if (error) { console.error(error); toast.error('Failed to load listings'); setLoading(false); return; }
+      if (!productsData?.length) { setProducts([]); setLoading(false); return; }
 
       const farmerIds = [...new Set(productsData.map(p => p.farmer_id))];
       const { data: farmersData } = await supabase.from('farmer_profiles_public')
@@ -134,14 +90,8 @@ const Products = () => {
       const farmerMap = new Map<string, FarmerPublicProfile>();
       farmersData?.forEach(f => farmerMap.set(f.id, f as FarmerPublicProfile));
 
-      if (requestId !== requestIdRef.current) return;
-
-      const nextProducts = productsData
-        .filter((p) => farmerMap.has(p.farmer_id))
-        .map((p) => ({ ...p, farmer: farmerMap.get(p.farmer_id) }));
-
-      setProducts(nextProducts);
-      logActivity('product_feed_loaded', { state: selectedState, metadata: { count: nextProducts.length } });
+      setProducts(productsData.filter(p => farmerMap.has(p.farmer_id)).map(p => ({ ...p, farmer: farmerMap.get(p.farmer_id) })));
+      logActivity('product_feed_loaded', { state: selectedState, metadata: { count: productsData.length } });
       setLoading(false);
     };
     fetchProducts();
@@ -174,7 +124,7 @@ const Products = () => {
   }, [products, selectedState, category, searchQuery, sortBy, minPrice, maxPrice, minRating]);
 
   const transformedProducts = useMemo(() => filteredProducts.map(p => ({
-    id: p.id, name: p.name, description: p.description || '', price: p.price, unit: p.unit,
+    id: p.id, slug: p.slug || undefined, name: p.name, description: p.description || '', price: p.price, unit: p.unit,
     category: p.category as ProductCategory, image: p.image_url || '/placeholder.svg',
     farmerId: p.farmer!.id, farmerName: p.farmer!.farm_name, farmName: p.farmer!.farm_name,
     state: (p.state || p.farmer!.state) as State, available: p.available_quantity,
