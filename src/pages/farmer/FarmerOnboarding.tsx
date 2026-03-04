@@ -64,7 +64,6 @@ export default function FarmerOnboarding() {
   const [farmSize, setFarmSize] = useState('');
   const [produceTypes, setProduceTypes] = useState<string[]>([]);
   const [whatsappPhone, setWhatsappPhone] = useState('');
-  const [contactVisibilityConsent, setContactVisibilityConsent] = useState(false);
   
   // Bank details
   const [bankCode, setBankCode] = useState('');
@@ -241,8 +240,6 @@ export default function FarmerOnboarding() {
           farm_size: farmSize,
           produce_types: produceTypes,
           whatsapp_phone: whatsappPhone || null,
-          contact_visibility_consent: contactVisibilityConsent,
-          contact_consent_at: contactVisibilityConsent ? new Date().toISOString() : null,
           id_document_url: idDocUrl,
           farm_registration_url: farmRegUrl,
           verification_status: 'pending',
@@ -506,7 +503,7 @@ export default function FarmerOnboarding() {
                 <div className="flex justify-end pt-4">
                   <Button 
                     onClick={() => setStep('bank')}
-                    disabled={!farmName || !state || !address || !whatsappPhone || !contactVisibilityConsent || produceTypes.length === 0 || (state === 'abuja' && !areaId)}
+                    disabled={!farmName || !state || !address || !whatsappPhone || produceTypes.length === 0 || (state === 'abuja' && !areaId)}
                   >
                     Continue <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>

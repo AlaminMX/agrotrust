@@ -165,7 +165,6 @@ export default function EditProduct() {
               </div>
 
               <div className="space-y-2"><Label htmlFor="name">Product Name *</Label><Input id="name" value={name} onChange={(e) => setName(e.target.value)} required /></div>
-              <div className="space-y-2"><Label htmlFor="state">Listing State *</Label><Input id="state" value={productState} readOnly className="bg-muted" /><p className="text-xs text-muted-foreground">State follows your verified farmer location.</p></div>
               <div className="space-y-2"><Label htmlFor="description">Description</Label><Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} /></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label htmlFor="category">Category *</Label><Select value={category} onValueChange={setCategory} required><SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger><SelectContent>{CATEGORIES.map((cat) => <SelectItem key={cat.value} value={cat.value}>{cat.icon} {cat.label}</SelectItem>)}</SelectContent></Select></div>
