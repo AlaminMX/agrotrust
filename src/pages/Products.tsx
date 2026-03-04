@@ -17,7 +17,7 @@ import { logActivity } from '@/lib/activityLogger';
 type SortOption = 'newest' | 'price-low' | 'price-high' | 'rating';
 
 interface DatabaseProduct {
-  id: string; slug?: string | null; name: string; description: string | null; price: number; unit: string;
+  id: string; slug: string | null; name: string; description: string | null; price: number; unit: string;
   category: string; image_url: string | null; available_quantity: number;
   average_rating: number | null; review_count: number | null; state: string | null;
   farmer_id: string;
@@ -67,27 +67,15 @@ const Products = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
-      const queryState = (query: ReturnType<typeof supabase.from>) => {
-        return selectedState !== 'all' ? query.eq('state', selectedState) : query;
-      };
+      let query = supabase
+        .from('products').select('id, slug, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
+        .eq('is_active', true);
 
-      let { data: productsData, error } = await queryState(
-        supabase
-          .from('products')
-          .select('id, slug, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
-          .eq('is_active', true)
-      );
-
-      if (error?.code === '42703' || error?.message?.toLowerCase().includes('slug')) {
-        const fallback = await queryState(
-          supabase
-            .from('products')
-            .select('id, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
-            .eq('is_active', true)
-        );
-        productsData = fallback.data as DatabaseProduct[] | null;
-        error = fallback.error;
+      if (selectedState !== 'all') {
+        query = query.eq('state', selectedState);
       }
+
+      const { data: productsData, error } = await query;
 
       if (error) { console.error(error); toast.error('Failed to load listings'); setLoading(false); return; }
       if (!productsData?.length) { setProducts([]); setLoading(false); return; }
