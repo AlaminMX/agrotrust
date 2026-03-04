@@ -43,6 +43,8 @@ const Products = () => {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [minRating, setMinRating] = useState<number | null>(null);
+  const requestIdRef = useRef(0);
+  const lastToastStateRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (routeState && STATES.some(s => s.value === routeState)) {
@@ -66,6 +68,7 @@ const Products = () => {
 
   useEffect(() => {
     const fetchProducts = async () => {
+      const requestId = ++requestIdRef.current;
       setLoading(true);
       let query = supabase
         .from('products').select('id, slug, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
