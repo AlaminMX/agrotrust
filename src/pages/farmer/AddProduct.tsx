@@ -271,6 +271,17 @@ export default function AddProduct() {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="state">Listing State *</Label>
+                  <Input
+                    id="state"
+                    value={farmerProfile?.state || ''}
+                    readOnly
+                    className="bg-muted"
+                  />
+                  <p className="text-xs text-muted-foreground">State is locked to your verified farmer profile.</p>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="category">Category *</Label>
                   <Select value={category} onValueChange={setCategory} required>
                     <SelectTrigger>

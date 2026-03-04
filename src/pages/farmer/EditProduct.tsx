@@ -44,6 +44,7 @@ export default function EditProduct() {
   const [listingStatus, setListingStatus] = useState('published');
   const [productImage, setProductImage] = useState<File | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+  const [productState, setProductState] = useState('');
 
   useEffect(() => {
     if (!authLoading && !user) navigate('/auth');
@@ -68,6 +69,7 @@ export default function EditProduct() {
     setIsNegotiable(data.is_negotiable ?? false);
     setListingStatus(data.listing_status || (data.is_active ? 'published' : 'draft'));
     setCurrentImageUrl(data.image_url);
+    setProductState(data.state || '');
     setLoading(false);
   };
 

@@ -488,6 +488,17 @@ export default function FarmerOnboarding() {
                     ))}
                   </div>
                 </div>
+
+                <div className="flex items-start space-x-2 rounded-lg border p-3">
+                  <Checkbox
+                    id="contact-visibility"
+                    checked={contactVisibilityConsent}
+                    onCheckedChange={(checked) => setContactVisibilityConsent(Boolean(checked))}
+                  />
+                  <label htmlFor="contact-visibility" className="text-sm cursor-pointer">
+                    I understand my contact details (WhatsApp/phone) will be publicly visible on my listings so buyers can contact me directly.
+                  </label>
+                </div>
                 
                 <div className="flex justify-end pt-4">
                   <Button 
