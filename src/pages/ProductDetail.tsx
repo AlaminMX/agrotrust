@@ -62,7 +62,10 @@ const ProductDetail = () => {
 
   useEffect(() => {
     const fetchProduct = async () => {
-      if (!id) return;
+      if (!id && !slug) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         const query = supabase.from('products').select('*');
