@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { ProductCard } from '@/components/products/ProductCard';
 import { StateBanner } from '@/components/products/StateBanner';
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { logActivity } from '@/lib/activityLogger';
 
 type SortOption = 'newest' | 'price-low' | 'price-high' | 'rating';
 
@@ -31,6 +32,7 @@ interface ProductWithFarmer extends DatabaseProduct {
 }
 
 const Products = () => {
+  const { state: routeState } = useParams<{ state?: State }>();
   const [searchParams] = useSearchParams();
   const { selectedState, setSelectedState } = useCart();
   const [category, setCategory] = useState<ProductCategory | 'all'>('all');
@@ -41,8 +43,14 @@ const Products = () => {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [minRating, setMinRating] = useState<number | null>(null);
+  const requestIdRef = useRef(0);
+  const lastToastStateRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (routeState && STATES.some(s => s.value === routeState)) {
+      setSelectedState(routeState);
+      return;
+    }
     const stateParam = searchParams.get('state') as State;
     if (stateParam && STATES.some(s => s.value === stateParam)) {
       setSelectedState(stateParam);
@@ -51,17 +59,73 @@ const Products = () => {
     if (searchParam) setSearchQuery(searchParam);
     const categoryParam = searchParams.get('category');
     if (categoryParam) setCategory(categoryParam as ProductCategory);
-  }, [searchParams, setSelectedState]);
+  }, [routeState, searchParams, setSelectedState]);
+
+  useEffect(() => {
+    const stateLabel = STATES.find((s) => s.value === selectedState)?.label || 'Nigeria';
+    document.title = selectedState === 'all' ? 'Browse Farm Products in Nigeria | AgroTrust' : `Fresh Farm Produce in ${stateLabel} | AgroTrust`;
+  }, [selectedState]);
 
   useEffect(() => {
     const fetchProducts = async () => {
+      const requestId = ++requestIdRef.current;
       setLoading(true);
-      const { data: productsData, error } = await supabase
-        .from('products').select('id, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
-        .eq('is_active', true);
+      const queryState = (query: ReturnType<typeof supabase.from>) => {
+        return selectedState !== 'all' ? query.eq('state', selectedState) : query;
+      };
 
-      if (error) { console.error(error); toast.error('Failed to load listings'); setLoading(false); return; }
-      if (!productsData?.length) { setProducts([]); setLoading(false); return; }
+      let { data: productsData, error } = await queryState(
+        supabase
+          .from('products')
+          .select('id, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
+          .eq('is_active', true)
+      );
+
+      // Some environments can fail on state-filtered queries (schema mismatch / stale caches / policy differences).
+      // Retry safely without state filter and apply state constraint in-memory.
+      if (error && selectedState !== 'all') {
+        const fallback = await supabase
+          .from('products')
+          .select('id, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
+          .eq('is_active', true);
+
+        if (!fallback.error && fallback.data) {
+          productsData = fallback.data.filter((p) => p.state === selectedState);
+          error = null;
+        }
+      }
+
+      // Final compatibility retry for legacy schema responses.
+      if (error?.code === '42703') {
+        const fallback = await queryState(
+          supabase
+            .from('products')
+            .select('id, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
+            .eq('is_active', true)
+        );
+        productsData = fallback.data as DatabaseProduct[] | null;
+        error = fallback.error;
+      }
+
+      if (requestId !== requestIdRef.current) return;
+
+      if (error) {
+        console.error(error);
+        if (lastToastStateRef.current !== selectedState) {
+          toast.error('Failed to load listings');
+          lastToastStateRef.current = selectedState;
+        }
+        setLoading(false);
+        return;
+      }
+
+      lastToastStateRef.current = null;
+
+      if (!productsData?.length) {
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
 
       const farmerIds = [...new Set(productsData.map(p => p.farmer_id))];
       const { data: farmersData } = await supabase.from('farmer_profiles_public')
@@ -70,11 +134,18 @@ const Products = () => {
       const farmerMap = new Map<string, FarmerPublicProfile>();
       farmersData?.forEach(f => farmerMap.set(f.id, f as FarmerPublicProfile));
 
-      setProducts(productsData.filter(p => farmerMap.has(p.farmer_id)).map(p => ({ ...p, farmer: farmerMap.get(p.farmer_id) })));
+      if (requestId !== requestIdRef.current) return;
+
+      const nextProducts = productsData
+        .filter((p) => farmerMap.has(p.farmer_id))
+        .map((p) => ({ ...p, farmer: farmerMap.get(p.farmer_id) }));
+
+      setProducts(nextProducts);
+      logActivity('product_feed_loaded', { state: selectedState, metadata: { count: nextProducts.length } });
       setLoading(false);
     };
     fetchProducts();
-  }, []);
+  }, [selectedState]);
 
   const handleStateChange = (newState: State) => { setSelectedState(newState); };
   const clearFilters = () => { setMinPrice(''); setMaxPrice(''); setMinRating(null); };

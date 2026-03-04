@@ -15,9 +15,11 @@ export const ProductCard = ({ product, showState = false }: ProductCardProps) =>
     ? STATES.find(s => s.value === product.state)?.label 
     : null;
 
+  const productUrl = `/products/id/${product.id}`;
+
   return (
     <Link
-      to={`/products/${product.id}`}
+      to={productUrl}
       className="group block overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:shadow-card-hover hover:border-primary/20"
     >
       {/* Image */}
