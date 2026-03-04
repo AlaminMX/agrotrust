@@ -41,7 +41,7 @@ export const StateBanner = ({ selectedState, onStateChange, hasItemsInCart }: St
           </div>
           <div>
             <p className="text-sm text-muted-foreground">
-              {isAllStates ? 'Showing products from' : 'Showing products available in'}
+              {isAllStates ? 'Showing active listings from' : 'Showing listings available in'}
             </p>
             <p className="font-semibold text-lg">
               {isAllStates ? 'All States in Nigeria' : `${currentState?.label}, Nigeria`}
@@ -52,12 +52,12 @@ export const StateBanner = ({ selectedState, onStateChange, hasItemsInCart }: St
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="outline" size="sm">
-              Change Location
+              Change Delivery State
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Change Your Location</AlertDialogTitle>
+              <AlertDialogTitle>Change Delivery Location</AlertDialogTitle>
               <AlertDialogDescription>
                 {hasItemsInCart ? (
                   <span className="flex items-start gap-2 text-amber-600">
@@ -67,7 +67,7 @@ export const StateBanner = ({ selectedState, onStateChange, hasItemsInCart }: St
                     </span>
                   </span>
                 ) : (
-                  'Select a different state to see products available for delivery in that area, or choose "All Nigeria" to browse everything.'
+                  'Select a state to view listings that can be delivered there, or choose "All Nigeria" to explore every active listing.'
                 )}
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -103,7 +103,7 @@ export const StateBanner = ({ selectedState, onStateChange, hasItemsInCart }: St
       <p className="text-xs text-muted-foreground mt-2">
         {isAllStates 
           ? 'Showing products from all states. When you checkout, delivery is only available within the farmer\'s state.'
-          : `Products listed are only available for delivery within ${currentState?.label}. Farmers in other states cannot deliver to your location.`
+          : `These listings are currently deliverable within ${currentState?.label}. Switch location to discover listings in other states.`
         }
       </p>
     </div>

@@ -9,6 +9,9 @@ import { Star, MapPin, Calendar, Loader2, MessageCircle, Phone } from 'lucide-re
 import { useState, useEffect } from 'react';
 import { ProductReviews } from '@/components/reviews/ProductReviews';
 import { supabase } from '@/integrations/supabase/client';
+import { logActivity, getGuestSessionId } from '@/lib/activityLogger';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 interface DatabaseProduct {
   id: string;
@@ -25,6 +28,7 @@ interface DatabaseProduct {
   farmer_id: string;
   is_negotiable: boolean;
   listing_status: string;
+  slug: string | null;
 }
 
 interface FarmerProfile {
@@ -46,22 +50,34 @@ interface FarmerProfile {
 }
 
 const ProductDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id, slug } = useParams<{ id?: string; slug?: string; state?: string }>();
   const [loading, setLoading] = useState(true);
   const [product, setProduct] = useState<Product | null>(null);
   const [farmer, setFarmer] = useState<FarmerProfile | null>(null);
   const [isNegotiable, setIsNegotiable] = useState(false);
+  const [reportReason, setReportReason] = useState('scam_or_fake');
+  const [reportDetails, setReportDetails] = useState('');
+  const [reporting, setReporting] = useState(false);
+  const [reportSent, setReportSent] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
-      if (!id) return;
+      if (!id && !slug) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
-        const { data: productData, error: productError } = await supabase
-          .from('products')
-          .select('*')
-          .eq('id', id)
-          .maybeSingle();
+        const query = supabase.from('products').select('*');
+        let { data: productData, error: productError } = slug
+          ? await query.eq('slug', slug).maybeSingle()
+          : await query.eq('id', id).maybeSingle();
+
+        if ((productError?.code === '42703' || productError?.message?.toLowerCase().includes('slug')) && id) {
+          const fallback = await supabase.from('products').select('*').eq('id', id).maybeSingle();
+          productData = fallback.data;
+          productError = fallback.error;
+        }
 
         if (productError) throw productError;
         if (!productData) { setLoading(false); return; }
@@ -106,6 +122,7 @@ const ProductDetail = () => {
         };
         
         setProduct(transformedProduct);
+        logActivity('product_view', { productId: dbProduct.id, state: dbProduct.state || farmerData?.state || undefined, metadata: { slug: dbProduct.slug } });
         
         if (farmerData) {
           setFarmer({
@@ -122,7 +139,13 @@ const ProductDetail = () => {
       }
     };
     fetchProduct();
-  }, [id]);
+  }, [id, slug]);
+
+  useEffect(() => {
+    if (!product) return;
+    const resolvedStateLabel = STATES.find(s => s.value === product.state)?.label || product.state;
+    document.title = `${product.name} in ${resolvedStateLabel} | AgroTrust`;
+  }, [product]);
 
   if (loading) {
     return <Layout><div className="container py-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></Layout>;
@@ -144,6 +167,24 @@ const ProductDetail = () => {
   const whatsappNumber = farmer?.whatsapp_phone || farmer?.phone || '';
   const whatsappLink = whatsappNumber ? `https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hi, I'm interested in your listing: ${product.name}`)}` : '';
   const callNumber = farmer?.phone || farmer?.secondary_phone || '';
+
+  const submitReport = async () => {
+    if (!product) return;
+    setReporting(true);
+    try {
+      await supabase.from('listing_reports' as never).insert({
+        product_id: product.id,
+        reporter_session_id: getGuestSessionId(),
+        reason: reportReason,
+        details: reportDetails || null,
+      } as never);
+      await logActivity('listing_reported', { productId: product.id, state: product.state, metadata: { reason: reportReason } });
+      setReportSent(true);
+      setReportDetails('');
+    } finally {
+      setReporting(false);
+    }
+  };
 
   return (
     <Layout>
@@ -202,7 +243,7 @@ const ProductDetail = () => {
               <h3 className="font-semibold text-foreground">Contact Farmer</h3>
               <div className="flex gap-3">
                 {whatsappLink && (
-                  <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="flex-1">
+                  <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="flex-1" onClick={() => logActivity('contact_farmer_whatsapp', { productId: product.id, state: product.state })}>
                     <Button size="lg" className="w-full bg-green-600 hover:bg-green-700 text-white gap-2">
                       <MessageCircle className="h-5 w-5" />
                       WhatsApp
@@ -210,7 +251,7 @@ const ProductDetail = () => {
                   </a>
                 )}
                 {callNumber && (
-                  <a href={`tel:${callNumber}`} className="flex-1">
+                  <a href={`tel:${callNumber}`} className="flex-1" onClick={() => logActivity('contact_farmer_call', { productId: product.id, state: product.state })}>
                     <Button size="lg" variant="outline" className="w-full gap-2">
                       <Phone className="h-5 w-5" />
                       Call
@@ -221,6 +262,30 @@ const ProductDetail = () => {
               {!whatsappLink && !callNumber && (
                 <p className="text-sm text-muted-foreground">Contact details not available. The farmer has not provided contact information yet.</p>
               )}
+            </div>
+
+            <div className="space-y-3 pt-4 border-t border-border">
+              <h3 className="font-semibold text-foreground">Report this listing</h3>
+              <Select value={reportReason} onValueChange={setReportReason}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="scam_or_fake">Scam or fake listing</SelectItem>
+                  <SelectItem value="wrong_state">Wrong state/location</SelectItem>
+                  <SelectItem value="misleading_media">Misleading photo or details</SelectItem>
+                  <SelectItem value="abusive_content">Abusive/inappropriate content</SelectItem>
+                </SelectContent>
+              </Select>
+              <Textarea
+                value={reportDetails}
+                onChange={(e) => setReportDetails(e.target.value)}
+                placeholder="Describe the issue (optional)"
+                rows={3}
+              />
+              <Button variant="outline" onClick={submitReport} disabled={reporting || reportSent}>
+                {reportSent ? 'Report submitted' : reporting ? 'Submitting...' : 'Submit report'}
+              </Button>
             </div>
 
             {/* Farmer Info */}
