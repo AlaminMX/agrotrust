@@ -69,15 +69,9 @@ const ProductDetail = () => {
       setLoading(true);
       try {
         const query = supabase.from('products').select('*');
-        let { data: productData, error: productError } = slug
+        const { data: productData, error: productError } = slug
           ? await query.eq('slug', slug).maybeSingle()
           : await query.eq('id', id).maybeSingle();
-
-        if ((productError?.code === '42703' || productError?.message?.toLowerCase().includes('slug')) && id) {
-          const fallback = await supabase.from('products').select('*').eq('id', id).maybeSingle();
-          productData = fallback.data;
-          productError = fallback.error;
-        }
 
         if (productError) throw productError;
         if (!productData) { setLoading(false); return; }
