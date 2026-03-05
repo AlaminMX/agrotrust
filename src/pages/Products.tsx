@@ -84,8 +84,15 @@ const Products = () => {
       if (!productsData?.length) { setProducts([]); setLoading(false); return; }
 
       const farmerIds = [...new Set(productsData.map(p => p.farmer_id))];
-      const { data: farmersData } = await supabase.from('farmer_profiles_public')
-        .select('id, farm_name, state, verification_status, user_id').in('id', farmerIds).eq('verification_status', 'approved');
+      const { data: farmersData, error: farmersError } = await supabase
+        .from('farmer_profiles_public')
+        .select('id, farm_name, state, verification_status, user_id')
+        .in('id', farmerIds)
+        .eq('verification_status', 'approved');
+
+      if (farmersError) {
+        console.warn('Farmer public profile lookup failed, falling back to product-only display:', farmersError.message);
+      }
 
       const farmerMap = new Map<string, FarmerPublicProfile>();
       farmersData?.forEach(f => farmerMap.set(f.id, f as FarmerPublicProfile));
