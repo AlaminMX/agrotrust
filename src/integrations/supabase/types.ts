@@ -279,8 +279,6 @@ export type Database = {
           bank_account_number: string | null
           bank_name: string | null
           certification_urls: string[] | null
-          contact_consent_at: string | null
-          contact_visibility_consent: boolean
           created_at: string
           farm_description: string | null
           farm_name: string
@@ -310,8 +308,6 @@ export type Database = {
           bank_account_number?: string | null
           bank_name?: string | null
           certification_urls?: string[] | null
-          contact_consent_at?: string | null
-          contact_visibility_consent?: boolean
           created_at?: string
           farm_description?: string | null
           farm_name: string
@@ -341,8 +337,6 @@ export type Database = {
           bank_account_number?: string | null
           bank_name?: string | null
           certification_urls?: string[] | null
-          contact_consent_at?: string | null
-          contact_visibility_consent?: boolean
           created_at?: string
           farm_description?: string | null
           farm_name?: string
@@ -373,130 +367,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      activity_logs: {
-        Row: {
-          created_at: string
-          event_name: string
-          id: string
-          metadata: Json
-          product_id: string | null
-          session_id: string
-          state: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          event_name: string
-          id?: string
-          metadata?: Json
-          product_id?: string | null
-          session_id: string
-          state?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          event_name?: string
-          id?: string
-          metadata?: Json
-          product_id?: string | null
-          session_id?: string
-          state?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "activity_logs_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      listing_reports: {
-        Row: {
-          created_at: string
-          details: string | null
-          id: string
-          product_id: string
-          reason: string
-          reporter_session_id: string | null
-          reporter_user_id: string | null
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          details?: string | null
-          id?: string
-          product_id: string
-          reason: string
-          reporter_session_id?: string | null
-          reporter_user_id?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          details?: string | null
-          id?: string
-          product_id?: string
-          reason?: string
-          reporter_session_id?: string | null
-          reporter_user_id?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "listing_reports_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      session_logs: {
-        Row: {
-          created_at: string
-          first_seen_at: string
-          id: string
-          ip_hash: string | null
-          last_seen_at: string
-          referrer: string | null
-          session_id: string
-          updated_at: string
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          first_seen_at?: string
-          id?: string
-          ip_hash?: string | null
-          last_seen_at?: string
-          referrer?: string | null
-          session_id: string
-          updated_at?: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          first_seen_at?: string
-          id?: string
-          ip_hash?: string | null
-          last_seen_at?: string
-          referrer?: string | null
-          session_id?: string
-          updated_at?: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
       }
       order_items: {
         Row: {
@@ -759,7 +629,6 @@ export type Database = {
           is_negotiable: boolean
           listing_status: string
           name: string
-          slug: string | null
           original_price: number | null
           price: number
           review_count: number | null
@@ -782,7 +651,6 @@ export type Database = {
           is_negotiable?: boolean
           listing_status?: string
           name: string
-          slug?: string | null
           original_price?: number | null
           price: number
           review_count?: number | null
@@ -805,7 +673,6 @@ export type Database = {
           is_negotiable?: boolean
           listing_status?: string
           name?: string
-          slug?: string | null
           original_price?: number | null
           price?: number
           review_count?: number | null

@@ -21,12 +21,12 @@ export const logActivity = async (eventName: string, payload: { productId?: stri
     const userAgent = navigator.userAgent;
     const referrer = document.referrer || null;
 
-    await supabase.from('session_logs' as never).upsert({
+    await supabase.from('session_logs' as never).insert({
       session_id: sessionId,
       user_agent: userAgent,
       referrer,
       last_seen_at: new Date().toISOString(),
-    } as never, { onConflict: 'session_id' });
+    } as never);
 
     await supabase.from('activity_logs' as never).insert({
       session_id: sessionId,

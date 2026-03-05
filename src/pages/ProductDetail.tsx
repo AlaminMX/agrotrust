@@ -68,10 +68,11 @@ const ProductDetail = () => {
       }
       setLoading(true);
       try {
-        const query = supabase.from('products').select('*');
-        const { data: productData, error: productError } = slug
-          ? await query.eq('slug', slug).maybeSingle()
-          : await query.eq('id', id).maybeSingle();
+        const selectFields = 'id, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id, is_negotiable, listing_status';
+        const query = supabase.from('products').select(selectFields);
+        const { data: productData, error: productError } = id
+          ? await query.eq('id', id).maybeSingle()
+          : await query.maybeSingle();
 
         if (productError) throw productError;
         if (!productData) { setLoading(false); return; }
