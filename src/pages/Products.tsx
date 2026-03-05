@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { ProductCard } from '@/components/products/ProductCard';
@@ -17,7 +17,7 @@ import { logActivity } from '@/lib/activityLogger';
 type SortOption = 'newest' | 'price-low' | 'price-high' | 'rating';
 
 interface DatabaseProduct {
-  id: string; slug: string | null; name: string; description: string | null; price: number; unit: string;
+  id: string; name: string; description: string | null; price: number; unit: string;
   category: string; image_url: string | null; available_quantity: number;
   average_rating: number | null; review_count: number | null; state: string | null;
   farmer_id: string;
@@ -71,7 +71,7 @@ const Products = () => {
       const requestId = ++requestIdRef.current;
       setLoading(true);
       let query = supabase
-        .from('products').select('id, slug, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
+        .from('products').select('id, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
         .eq('is_active', true);
 
       if (selectedState !== 'all') {
@@ -131,7 +131,7 @@ const Products = () => {
   }, [products, selectedState, category, searchQuery, sortBy, minPrice, maxPrice, minRating]);
 
   const transformedProducts = useMemo(() => filteredProducts.map(p => ({
-    id: p.id, slug: p.slug || undefined, name: p.name, description: p.description || '', price: p.price, unit: p.unit,
+    id: p.id, name: p.name, description: p.description || '', price: p.price, unit: p.unit,
     category: p.category as ProductCategory, image: p.image_url || '/placeholder.svg',
     farmerId: p.farmer!.id, farmerName: p.farmer!.farm_name, farmName: p.farmer!.farm_name,
     state: (p.state || p.farmer!.state) as State, available: p.available_quantity,

@@ -64,6 +64,7 @@ export default function FarmerOnboarding() {
   const [farmSize, setFarmSize] = useState('');
   const [produceTypes, setProduceTypes] = useState<string[]>([]);
   const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [contactVisibilityConsent, setContactVisibilityConsent] = useState(false);
   
   // Bank details
   const [bankCode, setBankCode] = useState('');
