@@ -158,11 +158,6 @@ export default function AdminProducts() {
                       <TableCell>
                         <div>
                           <p className="font-medium">{product.name}</p>
-                          {product.discount_percentage && product.discount_percentage > 0 && (
-                            <Badge variant="destructive" className="text-xs mt-1">
-                              -{product.discount_percentage}% OFF
-                            </Badge>
-                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -180,11 +175,6 @@ export default function AdminProducts() {
                       <TableCell>
                         <div>
                           <p className="font-medium">{formatPrice(product.price)}</p>
-                          {product.original_price && (
-                            <p className="text-xs text-muted-foreground line-through">
-                              {formatPrice(product.original_price)}
-                            </p>
-                          )}
                         </div>
                       </TableCell>
                       <TableCell>

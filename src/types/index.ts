@@ -13,8 +13,6 @@ export interface Product {
   state: State;
   available: number;
   isVerified: boolean;
-  rating: number;
-  reviewCount: number;
 }
 
 export interface Farmer {
@@ -25,50 +23,13 @@ export interface Farmer {
   bio: string;
   image: string;
   isVerified: boolean;
-  rating: number;
-  reviewCount: number;
   memberSince: string;
   productsCount: number;
 }
 
-export interface CartItem {
-  product: Product;
-  quantity: number;
-}
-
-export interface Order {
-  id: string;
-  items: CartItem[];
-  totalAmount: number;
-  deliveryFee: number;
-  status: OrderStatus;
-  deliveryAddress: string;
-  state: State;
-  createdAt: string;
-  updatedAt: string;
-  estimatedDelivery: string;
-  trackingEvents: TrackingEvent[];
-}
-
-export interface TrackingEvent {
-  status: OrderStatus;
-  timestamp: string;
-  description: string;
-}
-
 export type State = 'all' | 'abuja' | 'kaduna' | 'bauchi' | 'kano';
 
-export type OrderStatus = 
-  | 'pending'
-  | 'paid'
-  | 'processing'
-  | 'dispatched'
-  | 'out_for_delivery'
-  | 'delivered'
-  | 'confirmed'
-  | 'disputed';
-
-export type ProductCategory = 
+export type ProductCategory =
   | 'vegetables'
   | 'fruits'
   | 'grains'

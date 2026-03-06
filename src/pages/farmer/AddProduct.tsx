@@ -13,12 +13,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowLeft, Upload, CheckCircle2, Leaf, ImageIcon, AlertCircle } from 'lucide-react';
 import { CATEGORIES } from '@/types';
 import { cn } from '@/lib/utils';
+import { compressImage } from '@/lib/imageCompression';
 
 export default function AddProduct() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [farmerProfile, setFarmerProfile] = useState<any>(null);
+  const [farmerProfile, setFarmerProfile] = useState<{ id: string; state: string; verification_status?: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   
@@ -26,11 +27,9 @@ export default function AddProduct() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
-  const [originalPrice, setOriginalPrice] = useState('');
   const [unit, setUnit] = useState('kg');
   const [category, setCategory] = useState('');
   const [availableQuantity, setAvailableQuantity] = useState('');
-  const [weightKg, setWeightKg] = useState('1');
   const [productImage, setProductImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
@@ -65,10 +64,11 @@ export default function AddProduct() {
     setLoading(false);
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setProductImage(file);
+      const compressed = await compressImage(file);
+      setProductImage(compressed);
       setImageError(false);
       // Create preview
       const reader = new FileReader();
@@ -118,10 +118,6 @@ export default function AddProduct() {
       const imageUrl = await uploadImage(productImage);
       
       const salePrice = parseFloat(price);
-      const origPrice = originalPrice ? parseFloat(originalPrice) : null;
-      const discountPct = origPrice && origPrice > salePrice 
-        ? Math.round(((origPrice - salePrice) / origPrice) * 100) 
-        : 0;
 
       const { error } = await supabase
         .from('products')
@@ -130,12 +126,10 @@ export default function AddProduct() {
           name,
           description,
           price: salePrice,
-          original_price: origPrice,
-          discount_percentage: discountPct,
           unit,
           category,
           available_quantity: parseInt(availableQuantity),
-          weight_kg: parseFloat(weightKg) || 1,
+          availability_status: availabilityStatus,
           image_url: imageUrl,
           is_active: listingStatus === 'published',
           is_negotiable: isNegotiable,
@@ -152,10 +146,10 @@ export default function AddProduct() {
       
       navigate('/farmer/dashboard');
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Failed to add product',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     } finally {

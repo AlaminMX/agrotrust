@@ -10,40 +10,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, CheckCircle2, ArrowRight, ArrowLeft, Leaf, Building2 } from 'lucide-react';
+import { Loader2, CheckCircle2, ArrowRight, ArrowLeft, Leaf } from 'lucide-react';
 import { STATES, CATEGORIES } from '@/types';
 
-type Step = 'details' | 'bank' | 'documents' | 'review';
-
-const NIGERIAN_BANKS = [
-  { code: '044', name: 'Access Bank' },
-  { code: '023', name: 'Citibank Nigeria' },
-  { code: '063', name: 'Diamond Bank' },
-  { code: '050', name: 'Ecobank Nigeria' },
-  { code: '084', name: 'Enterprise Bank' },
-  { code: '070', name: 'Fidelity Bank' },
-  { code: '011', name: 'First Bank of Nigeria' },
-  { code: '214', name: 'First City Monument Bank' },
-  { code: '058', name: 'Guaranty Trust Bank' },
-  { code: '030', name: 'Heritage Bank' },
-  { code: '301', name: 'Jaiz Bank' },
-  { code: '082', name: 'Keystone Bank' },
-  { code: '526', name: 'Parallex Bank' },
-  { code: '076', name: 'Polaris Bank' },
-  { code: '101', name: 'Providus Bank' },
-  { code: '221', name: 'Stanbic IBTC Bank' },
-  { code: '068', name: 'Standard Chartered Bank' },
-  { code: '232', name: 'Sterling Bank' },
-  { code: '100', name: 'Suntrust Bank' },
-  { code: '032', name: 'Union Bank of Nigeria' },
-  { code: '033', name: 'United Bank for Africa' },
-  { code: '215', name: 'Unity Bank' },
-  { code: '035', name: 'Wema Bank' },
-  { code: '057', name: 'Zenith Bank' },
-  { code: '999991', name: 'Opay' },
-  { code: '999992', name: 'Palmpay' },
-  { code: '999993', name: 'Moniepoint' },
-];
+type Step = 'details' | 'documents' | 'review';
 
 export default function FarmerOnboarding() {
   const { user, loading: authLoading } = useAuth();
@@ -51,15 +21,11 @@ export default function FarmerOnboarding() {
   const { toast } = useToast();
   const [step, setStep] = useState<Step>('details');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [existingProfile, setExistingProfile] = useState<any>(null);
-  const [isVerifyingBank, setIsVerifyingBank] = useState(false);
-  
-  // Form state
+  const [existingProfile, setExistingProfile] = useState<{ verification_status?: string } | null>(null);
+
   const [farmName, setFarmName] = useState('');
   const [farmDescription, setFarmDescription] = useState('');
   const [state, setState] = useState('');
-  const [areaId, setAreaId] = useState('');
-  const [areas, setAreas] = useState<Array<{ id: string; area_name: string }>>([]);
   const [address, setAddress] = useState('');
   const [farmSize, setFarmSize] = useState('');
   const [produceTypes, setProduceTypes] = useState<string[]>([]);
@@ -74,148 +40,53 @@ export default function FarmerOnboarding() {
   
   // Document state
   const [idDocument, setIdDocument] = useState<File | null>(null);
-  const [farmRegistration, setFarmRegistration] = useState<File | null>(null);
-  
+  const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
+
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/auth');
-    }
+    if (!authLoading && !user) navigate('/auth');
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (user) {
-      checkExistingProfile();
-      ensureFarmerRole();
-    }
+    if (!user) return;
+    checkExistingProfile();
+    ensureFarmerRole();
   }, [user]);
 
   const ensureFarmerRole = async () => {
     if (!user) return;
-    
-    // Check if user already has farmer role
-    const { data: existingRole } = await supabase
-      .from('user_roles')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('role', 'farmer')
-      .maybeSingle();
-    
-    // Add farmer role if not already present (needed for bank verification during onboarding)
-    if (!existingRole) {
-      await supabase
-        .from('user_roles')
-        .insert({ user_id: user.id, role: 'farmer' });
-    }
-  };
-
-  // Load areas when state is Abuja
-  useEffect(() => {
-    if (state === 'abuja') {
-      loadAreas();
-    } else {
-      setAreas([]);
-      setAreaId('');
-    }
-  }, [state]);
-
-  const loadAreas = async () => {
-    const { data } = await supabase
-      .from('delivery_areas')
-      .select('id, area_name')
-      .eq('state', 'abuja')
-      .eq('is_active', true)
-      .order('area_name');
-    
-    if (data) {
-      setAreas(data);
+    const { data } = await supabase.from('user_roles').select('id').eq('user_id', user.id).eq('role', 'farmer').maybeSingle();
+    if (!data) {
+      await supabase.from('user_roles').insert({ user_id: user.id, role: 'farmer' });
     }
   };
 
   const checkExistingProfile = async () => {
-    const { data } = await supabase
-      .from('farmer_profiles')
-      .select('*')
-      .eq('user_id', user!.id)
-      .maybeSingle();
-    
-    if (data) {
-      setExistingProfile(data);
-      if (data.verification_status === 'approved') {
-        navigate('/farmer/dashboard');
-      }
-    }
-  };
-
-  const handleProduceTypeChange = (category: string, checked: boolean) => {
-    if (checked) {
-      setProduceTypes([...produceTypes, category]);
-    } else {
-      setProduceTypes(produceTypes.filter(t => t !== category));
-    }
-  };
-
-  const uploadDocument = async (file: File, type: string) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${user!.id}/${type}-${Date.now()}.${fileExt}`;
-    
-    const { error } = await supabase.storage
-      .from('farmer-documents')
-      .upload(fileName, file);
-    
-    if (error) throw error;
-    
-    // Return file path instead of public URL for private bucket
-    // Signed URLs will be generated on-demand when viewing documents
-    return fileName;
-  };
-
-  const verifyBankAccount = async () => {
-    if (!bankCode || !accountNumber || accountNumber.length !== 10) {
-      toast({
-        title: 'Invalid Details',
-        description: 'Please enter a valid bank and 10-digit account number',
-        variant: 'destructive',
-      });
+    if (!user) return;
+    const { data } = await supabase.from('farmer_profiles').select('*').eq('user_id', user.id).maybeSingle();
+    if (data?.verification_status === 'approved') {
+      navigate('/farmer/dashboard');
       return;
     }
+    setExistingProfile(data);
+  };
 
-    setIsVerifyingBank(true);
-    setAccountName('');
-    setBankVerified(false);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('verify-bank-account', {
-        body: { accountNumber, bankCode },
-      });
-
-      if (error || !data?.success) {
-        throw new Error(data?.error || error?.message || 'Could not verify account');
-      }
-
-      // Set the account name from Paystack verification
-      setAccountName(data.accountName);
-      setBankVerified(true);
-      
-      toast({
-        title: 'Account Verified!',
-        description: `Account holder: ${data.accountName}`,
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Verification Failed',
-        description: error.message || 'Could not verify bank account. Please check your details.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsVerifyingBank(false);
-    }
+  const uploadDocument = async (file: File, folder: string) => {
+    const ext = file.name.split('.').pop() || 'jpg';
+    const key = `${user!.id}/${folder}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from('farmer-documents').upload(key, file, { upsert: true });
+    if (error) throw error;
+    return key;
   };
 
   const handleSubmit = async () => {
     if (!user) return;
-    
+    if (!farmName || !state || !address || !whatsappPhone || !contactVisibilityConsent) {
+      toast({ title: 'Missing required fields', description: 'Complete required profile fields and consent.', variant: 'destructive' });
+      setStep('details');
+      return;
+    }
+
     setIsSubmitting(true);
-    
     try {
       let idDocUrl = null;
       let farmRegUrl = null;
@@ -251,48 +122,21 @@ export default function FarmerOnboarding() {
       
       if (error) throw error;
 
-      // Create transfer recipient with Paystack if bank details provided
-      if (bankCode && accountNumber && accountName) {
-        try {
-          const { data, error: recipientError } = await supabase.functions.invoke('create-transfer-recipient', {
-            body: { bankCode, accountNumber, accountName },
-          });
+      if (error) throw error;
 
-          if (recipientError) {
-            console.error('Failed to create transfer recipient:', recipientError);
-          } else {
-            console.log('Transfer recipient created successfully');
-          }
-        } catch (err) {
-          console.error('Error creating transfer recipient:', err);
-        }
-      }
-      
-      toast({
-        title: 'Application Submitted!',
-        description: 'Your farmer application is under review. We\'ll notify you once approved.',
-      });
-      
+      toast({ title: 'Application submitted', description: 'Your verification is now in review.' });
       setStep('review');
       checkExistingProfile();
-      
-    } catch (error: any) {
-      toast({
-        title: 'Submission Failed',
-        description: error.message,
-        variant: 'destructive',
-      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast({ title: 'Submission failed', description: message, variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
   if (existingProfile?.verification_status === 'pending' || existingProfile?.verification_status === 'under_review') {
@@ -300,21 +144,11 @@ export default function FarmerOnboarding() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
-            </div>
             <CardTitle>Application Under Review</CardTitle>
-            <CardDescription>
-              Your farmer application is being reviewed by our team. This usually takes 1-2 business days.
-            </CardDescription>
+            <CardDescription>Your farmer profile is being reviewed by admins.</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <p className="text-sm text-muted-foreground mb-4">
-              We'll notify you via email once your application is approved.
-            </p>
-            <Button variant="outline" onClick={() => navigate('/home')}>
-              Return Home
-            </Button>
+            <Button variant="outline" onClick={() => navigate('/home')}>Return Home</Button>
           </CardContent>
         </Card>
       </div>
@@ -325,129 +159,30 @@ export default function FarmerOnboarding() {
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Leaf className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-primary">Become a Farmer</span>
-          </div>
-          <p className="text-muted-foreground">Join AgroTrust and reach customers across Nigeria</p>
-        </div>
-
-        {/* Progress Steps */}
-        <div className="flex justify-center mb-8">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <div className={`flex items-center gap-2 ${step === 'details' ? 'text-primary' : 'text-muted-foreground'}`}>
-              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${step === 'details' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                1
-              </div>
-              <span className="hidden sm:inline text-sm">Details</span>
-            </div>
-            <div className="w-6 sm:w-12 h-0.5 bg-muted" />
-            <div className={`flex items-center gap-2 ${step === 'bank' ? 'text-primary' : 'text-muted-foreground'}`}>
-              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${step === 'bank' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                2
-              </div>
-              <span className="hidden sm:inline text-sm">Bank</span>
-            </div>
-            <div className="w-6 sm:w-12 h-0.5 bg-muted" />
-            <div className={`flex items-center gap-2 ${step === 'documents' ? 'text-primary' : 'text-muted-foreground'}`}>
-              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${step === 'documents' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                3
-              </div>
-              <span className="hidden sm:inline text-sm">Documents</span>
-            </div>
-            <div className="w-6 sm:w-12 h-0.5 bg-muted" />
-            <div className={`flex items-center gap-2 ${step === 'review' ? 'text-primary' : 'text-muted-foreground'}`}>
-              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${step === 'review' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                <CheckCircle2 className="h-5 w-5" />
-              </div>
-              <span className="hidden sm:inline text-sm">Done</span>
-            </div>
-          </div>
+          <div className="flex items-center justify-center gap-2 mb-4"><Leaf className="h-8 w-8 text-primary" /><span className="text-2xl font-bold text-primary">Become a Farmer</span></div>
+          <p className="text-muted-foreground">Create your profile and submit documents for verification.</p>
         </div>
 
         <Card>
-          {step === 'details' && (
-            <>
-              <CardHeader>
-                <CardTitle>Farm Details</CardTitle>
-                <CardDescription>Tell us about your farm</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="farmName">Farm Name *</Label>
-                  <Input
-                    id="farmName"
-                    placeholder="e.g., Green Valley Farm"
-                    value={farmName}
-                    onChange={(e) => setFarmName(e.target.value)}
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="farmDescription">Farm Description</Label>
-                  <Textarea
-                    id="farmDescription"
-                    placeholder="Tell customers about your farm, farming practices, etc."
-                    value={farmDescription}
-                    onChange={(e) => setFarmDescription(e.target.value)}
-                    rows={3}
-                  />
-                </div>
-                
+          <CardHeader>
+            <CardTitle>
+              {step === 'details' && 'Farm Details'}
+              {step === 'documents' && 'Verification Documents'}
+              {step === 'review' && 'Submitted'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {step === 'details' && (
+              <>
+                <div className="space-y-2"><Label>Farm Name *</Label><Input value={farmName} onChange={(e) => setFarmName(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Description</Label><Textarea value={farmDescription} onChange={(e) => setFarmDescription(e.target.value)} /></div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="state">State *</Label>
-                    <Select value={state} onValueChange={setState}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select state" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border z-50">
-                        {STATES.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>
-                            {s.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="farmSize">Farm Size</Label>
-                    <Select value={farmSize} onValueChange={setFarmSize}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select size" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border z-50">
-                        <SelectItem value="small">Small (&lt; 1 hectare)</SelectItem>
-                        <SelectItem value="medium">Medium (1-5 hectares)</SelectItem>
-                        <SelectItem value="large">Large (5-20 hectares)</SelectItem>
-                        <SelectItem value="xlarge">Extra Large (&gt; 20 hectares)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <div className="space-y-2"><Label>State *</Label><Select value={state} onValueChange={setState}><SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger><SelectContent>{STATES.filter(s=>s.value!=='all').map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select></div>
+                  <div className="space-y-2"><Label>Farm Size</Label><Input value={farmSize} onChange={(e) => setFarmSize(e.target.value)} placeholder="e.g. 2 hectares" /></div>
                 </div>
-
-                {/* Area selection for Abuja */}
-                {state === 'abuja' && areas.length > 0 && (
-                  <div className="space-y-2">
-                    <Label htmlFor="area">Delivery Area *</Label>
-                    <Select value={areaId} onValueChange={setAreaId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your area" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border z-50 max-h-60">
-                        {areas.map((area) => (
-                          <SelectItem key={area.id} value={area.id}>
-                            {area.area_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">This helps calculate accurate delivery fees</p>
-                  </div>
-                )}
-                
+                <div className="space-y-2"><Label>Address *</Label><Input value={address} onChange={(e) => setAddress(e.target.value)} /></div>
+                <div className="space-y-2"><Label>WhatsApp Phone *</Label><Input value={whatsappPhone} onChange={(e) => setWhatsappPhone(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Secondary Phone</Label><Input value={secondaryPhone} onChange={(e) => setSecondaryPhone(e.target.value)} /></div>
                 <div className="space-y-2">
                   <Label htmlFor="address">Farm Address *</Label>
                   <Textarea
@@ -476,16 +211,7 @@ export default function FarmerOnboarding() {
                   <Label>What do you produce? *</Label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {CATEGORIES.map((cat) => (
-                      <div key={cat.value} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={cat.value}
-                          checked={produceTypes.includes(cat.value)}
-                          onCheckedChange={(checked) => handleProduceTypeChange(cat.value, checked as boolean)}
-                        />
-                        <label htmlFor={cat.value} className="text-sm cursor-pointer">
-                          {cat.icon} {cat.label}
-                        </label>
-                      </div>
+                      <label key={cat.value} className="flex items-center gap-2 text-sm"><Checkbox checked={produceTypes.includes(cat.value)} onCheckedChange={(checked) => setProduceTypes(prev => checked ? [...prev, cat.value] : prev.filter(v => v !== cat.value))} />{cat.label}</label>
                     ))}
                   </div>
                 </div>
@@ -610,107 +336,17 @@ export default function FarmerOnboarding() {
                     Continue <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
-              </CardContent>
-            </>
-          )}
+              </>
+            )}
 
-          {step === 'documents' && (
-            <>
-              <CardHeader>
-                <CardTitle>Verification Documents</CardTitle>
-                <CardDescription>Upload documents to verify your identity and farm</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-3">
-                  <Label>Government ID (NIN, Voter's Card, or Driver's License) *</Label>
-                  <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                    {idDocument ? (
-                      <div className="flex items-center justify-center gap-2 text-primary">
-                        <CheckCircle2 className="h-5 w-5" />
-                        <span>{idDocument.name}</span>
-                      </div>
-                    ) : (
-                      <div className="text-muted-foreground">
-                        <Upload className="h-8 w-8 mx-auto mb-2" />
-                        <p>Upload your ID document</p>
-                      </div>
-                    )}
-                    <Input
-                      type="file"
-                      accept="image/*,.pdf"
-                      className="mt-4"
-                      onChange={(e) => setIdDocument(e.target.files?.[0] || null)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-3">
-                  <Label>Farm Registration Document (Optional)</Label>
-                  <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                    {farmRegistration ? (
-                      <div className="flex items-center justify-center gap-2 text-primary">
-                        <CheckCircle2 className="h-5 w-5" />
-                        <span>{farmRegistration.name}</span>
-                      </div>
-                    ) : (
-                      <div className="text-muted-foreground">
-                        <Upload className="h-8 w-8 mx-auto mb-2" />
-                        <p>Upload farm registration (if available)</p>
-                      </div>
-                    )}
-                    <Input
-                      type="file"
-                      accept="image/*,.pdf"
-                      className="mt-4"
-                      onChange={(e) => setFarmRegistration(e.target.files?.[0] || null)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex justify-between pt-4">
-                  <Button variant="outline" onClick={() => setStep('bank')}>
-                    <ArrowLeft className="mr-2 h-4 w-4" /> Back
-                  </Button>
-                  <Button 
-                    onClick={handleSubmit}
-                    disabled={!idDocument || isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      'Submit Application'
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </>
-          )}
-
-          {step === 'review' && (
-            <>
-              <CardHeader className="text-center">
-                <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-                  <CheckCircle2 className="h-8 w-8 text-green-600" />
-                </div>
-                <CardTitle>Application Submitted!</CardTitle>
-                <CardDescription>
-                  Your application is now under review
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="text-center space-y-4">
-                <p className="text-muted-foreground">
-                  Our team will review your documents and verify your farm. This usually takes 1-2 business days.
-                  You'll receive an email notification once approved.
-                </p>
-                <Button onClick={() => navigate('/home')}>
-                  Return Home
-                </Button>
-              </CardContent>
-            </>
-          )}
+            {step === 'review' && (
+              <div className="text-center py-8">
+                <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto mb-4" />
+                <p className="text-muted-foreground">Your profile has been submitted. We will notify you after review.</p>
+                <Button className="mt-4" onClick={() => navigate('/home')}>Go Home</Button>
+              </div>
+            )}
+          </CardContent>
         </Card>
       </div>
     </div>

@@ -5,9 +5,8 @@ import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { BackButton } from '@/components/ui/BackButton';
 import { formatPrice, formatDate } from '@/lib/format';
 import { STATES, Product, State } from '@/types';
-import { Star, MapPin, Calendar, Loader2, MessageCircle, Phone } from 'lucide-react';
+import { MapPin, Calendar, Loader2, MessageCircle, Phone } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { ProductReviews } from '@/components/reviews/ProductReviews';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity, getGuestSessionId } from '@/lib/activityLogger';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -112,8 +111,7 @@ const ProductDetail = () => {
           farmerName, farmName: farmerData?.farm_name || 'Unknown Farm',
           state: (dbProduct.state || farmerData?.state || 'kaduna') as State,
           available: dbProduct.available_quantity,
-          isVerified: farmerData?.verification_status === 'approved',
-          rating: dbProduct.average_rating || 0, reviewCount: dbProduct.review_count || 0,
+          isVerified: farmerData?.verification_status === 'verified',
         };
         
         setProduct(transformedProduct);
@@ -208,19 +206,9 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className={`h-5 w-5 ${i < Math.floor(product.rating) ? 'fill-gold text-gold' : 'fill-muted text-muted'}`} />
-                ))}
-              </div>
-              <span className="font-medium text-foreground">{product.rating.toFixed(1)}</span>
-              <span className="text-muted-foreground">({product.reviewCount} reviews)</span>
-            </div>
-
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-foreground">{formatPrice(product.price)}</span>
-              <span className="text-lg text-muted-foreground">per {product.unit}</span>
+              <span className="text-3xl font-bold text-foreground">{product.price > 0 ? formatPrice(product.price) : "Contact for price"}</span>
+              {product.price > 0 && <span className="text-lg text-muted-foreground">per {product.unit}</span>}
               {isNegotiable && (
                 <span className="ml-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-sm font-medium">Negotiable</span>
               )}
@@ -300,7 +288,7 @@ const ProductDetail = () => {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-foreground">{farmer.full_name || farmer.farm_name}</span>
-                      {farmer.verification_status === 'approved' && <VerifiedBadge size="sm" showText={false} />}
+                      {farmer.verification_status === 'verified' && <VerifiedBadge size="sm" showText={false} />}
                     </div>
                     <p className="text-sm text-earth font-medium">{farmer.farm_name}</p>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
@@ -317,10 +305,6 @@ const ProductDetail = () => {
               </div>
             )}
           </div>
-        </div>
-
-        <div className="mt-12">
-          <ProductReviews productId={product.id} />
         </div>
       </div>
     </Layout>

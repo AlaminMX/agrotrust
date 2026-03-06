@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowLeft, Upload, CheckCircle2, Leaf, Trash2 } from 'lucide-react';
 import { CATEGORIES } from '@/types';
+import { compressImage } from '@/lib/imageCompression';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,11 +35,9 @@ export default function EditProduct() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
-  const [originalPrice, setOriginalPrice] = useState('');
   const [unit, setUnit] = useState('kg');
   const [category, setCategory] = useState('');
   const [availableQuantity, setAvailableQuantity] = useState('');
-  const [weightKg, setWeightKg] = useState('1');
   const [isActive, setIsActive] = useState(true);
   const [isNegotiable, setIsNegotiable] = useState(false);
   const [listingStatus, setListingStatus] = useState('published');
@@ -60,11 +59,9 @@ export default function EditProduct() {
     setName(data.name);
     setDescription(data.description || '');
     setPrice(data.price.toString());
-    setOriginalPrice(data.original_price?.toString() || '');
     setUnit(data.unit);
     setCategory(data.category);
     setAvailableQuantity(data.available_quantity.toString());
-    setWeightKg(data.weight_kg?.toString() || '1');
     setIsActive(data.is_active);
     setIsNegotiable(data.is_negotiable ?? false);
     setListingStatus(data.listing_status || (data.is_active ? 'published' : 'draft'));
