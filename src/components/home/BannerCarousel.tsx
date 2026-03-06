@@ -8,25 +8,25 @@ const banners = [
   {
     id: 1,
     title: 'Fresh Produce from Verified Farmers',
-    subtitle: 'Browse active listings, compare prices, and buy directly from trusted farmers in your state.',
-    cta: 'Shop Now',
+    subtitle: 'Browse listings from trusted farmers across Nigeria. Connect directly — no middlemen.',
+    cta: 'Browse Listings',
     link: '/products',
     image: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=1920&h=800&fit=crop&q=80',
   },
   {
     id: 2,
-    title: 'Farmers Control Their Listings',
-    subtitle: 'From negotiable pricing to listing status updates, farmers keep product information current and transparent.',
-    cta: 'Meet Our Farmers',
-    link: '/products',
+    title: 'Verified Farmers You Can Trust',
+    subtitle: 'Every farmer on AgroTrust is verified by our team. Look for the green badge.',
+    cta: 'Learn More',
+    link: '/trust-and-safety',
     image: 'https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=1920&h=800&fit=crop&q=80',
   },
   {
     id: 3,
-    title: 'Protected Payments, Fair Outcomes',
-    subtitle: 'AgroTrust escrow holds funds until delivery confirmation, protecting both buyers and farmers.',
-    cta: 'Learn More',
-    link: '/how-it-works',
+    title: 'Connect Directly via WhatsApp',
+    subtitle: 'Find produce you need, then contact the farmer directly. Simple, fast, transparent.',
+    cta: 'Start Browsing',
+    link: '/products',
     image: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=1920&h=800&fit=crop&q=80',
   },
 ];
@@ -79,7 +79,7 @@ export const BannerCarousel = () => {
                 <Link to={banner.link}>
                   <Button 
                     size="lg" 
-                    className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 font-semibold shadow-lg hover:shadow-xl transition-all px-8 py-6 text-lg group"
+                    className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 font-semibold shadow-lg px-8 py-6 text-lg group"
                   >
                     {banner.cta}
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
