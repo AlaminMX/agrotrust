@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BackButton } from '@/components/ui/BackButton';
 import { toast } from 'sonner';
-import { User, Settings, Star, Phone, Mail, HelpCircle, MessageCircle, LogOut } from 'lucide-react';
+import { User, Settings, Phone, Mail, HelpCircle, LogOut } from 'lucide-react';
 import { STATES, CATEGORIES, State, ProductCategory } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -25,7 +25,7 @@ interface Profile {
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -67,7 +67,7 @@ export default function Profile() {
       if (error) throw error;
       toast.success('Profile updated successfully');
       fetchProfile();
-    } catch (error) {
+    } catch {
       toast.error('Failed to update profile');
     } finally {
       setIsSaving(false);
@@ -107,11 +107,11 @@ export default function Profile() {
 
           <TabsContent value="preferences">
             <Card>
-              <CardHeader><CardTitle>Shopping Preferences</CardTitle><CardDescription>Customize your AgroTrust experience</CardDescription></CardHeader>
+              <CardHeader><CardTitle>Browse Preferences</CardTitle><CardDescription>Customize your AgroTrust experience</CardDescription></CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-3">
-                  <Label>Preferred Delivery State</Label>
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{STATES.map((state) => <button key={state.value} onClick={() => setPreferredState(state.value)} className={cn('flex items-center gap-2 p-3 rounded-lg border-2 transition-all text-left', preferredState === state.value ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30')}><span>{state.label}</span></button>)}</div>
+                  <Label>Preferred State</Label>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{STATES.filter(s => s.value !== 'all').map((state) => <button key={state.value} onClick={() => setPreferredState(state.value)} className={cn('flex items-center gap-2 p-3 rounded-lg border-2 transition-all text-left', preferredState === state.value ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30')}><span>{state.label}</span></button>)}</div>
                 </div>
                 <div className="space-y-3">
                   <Label>Produce Interests</Label>
@@ -124,7 +124,7 @@ export default function Profile() {
 
           <TabsContent value="account">
             <Card>
-              <CardHeader><CardTitle>Account Information</CardTitle><CardDescription>Update your personal information</CardDescription></CardHeader>
+              <CardHeader><CardTitle>Account Information</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2"><Label htmlFor="fullName">Full Name</Label><Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
                 <div className="space-y-2"><Label htmlFor="email">Email Address</Label><Input id="email" value={profile?.email || ''} disabled /><p className="text-xs text-muted-foreground">Email cannot be changed</p></div>
@@ -136,12 +136,11 @@ export default function Profile() {
 
           <TabsContent value="support">
             <Card>
-              <CardHeader><CardTitle>Help & Support</CardTitle><CardDescription>Get help with your AgroTrust account</CardDescription></CardHeader>
+              <CardHeader><CardTitle>Help & Support</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start gap-3 p-4 rounded-lg border"><Mail className="h-5 w-5 text-primary mt-0.5" /><div><h4 className="font-medium">Email Support</h4><p className="text-sm text-muted-foreground">support@agrotrust.ng</p></div></div>
                 <div className="flex items-start gap-3 p-4 rounded-lg border"><Phone className="h-5 w-5 text-primary mt-0.5" /><div><h4 className="font-medium">Phone Support</h4><p className="text-sm text-muted-foreground">+234 800 AGROTRUST</p></div></div>
-                <div className="flex items-start gap-3 p-4 rounded-lg border"><MessageCircle className="h-5 w-5 text-primary mt-0.5" /><div><h4 className="font-medium">Live Chat</h4><p className="text-sm text-muted-foreground">Available 8am - 8pm daily</p></div></div>
-                <Button variant="outline" onClick={() => navigate('/auth')}><LogOut className="h-4 w-4 mr-2" />Sign Out</Button>
+                <Button variant="outline" onClick={async () => { await signOut(); navigate('/'); }}><LogOut className="h-4 w-4 mr-2" />Sign Out</Button>
               </CardContent>
             </Card>
           </TabsContent>

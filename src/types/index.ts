@@ -1,6 +1,5 @@
 export interface Product {
   id: string;
-  slug?: string;
   name: string;
   description: string;
   price: number;
@@ -13,8 +12,8 @@ export interface Product {
   state: State;
   available: number;
   isVerified: boolean;
-  rating: number;
-  reviewCount: number;
+  is_negotiable?: boolean;
+  listing_status?: string;
 }
 
 export interface Farmer {
@@ -25,48 +24,13 @@ export interface Farmer {
   bio: string;
   image: string;
   isVerified: boolean;
-  rating: number;
-  reviewCount: number;
   memberSince: string;
   productsCount: number;
 }
 
-export interface CartItem {
-  product: Product;
-  quantity: number;
-}
-
-export interface Order {
-  id: string;
-  items: CartItem[];
-  totalAmount: number;
-  deliveryFee: number;
-  status: OrderStatus;
-  deliveryAddress: string;
-  state: State;
-  createdAt: string;
-  updatedAt: string;
-  estimatedDelivery: string;
-  trackingEvents: TrackingEvent[];
-}
-
-export interface TrackingEvent {
-  status: OrderStatus;
-  timestamp: string;
-  description: string;
-}
-
 export type State = 'all' | 'abuja' | 'kaduna' | 'bauchi' | 'kano';
 
-export type OrderStatus = 
-  | 'pending'
-  | 'paid'
-  | 'processing'
-  | 'dispatched'
-  | 'out_for_delivery'
-  | 'delivered'
-  | 'confirmed'
-  | 'disputed';
+export type AvailabilityStatus = 'In Stock' | 'Limited' | 'Out of Stock';
 
 export type ProductCategory = 
   | 'vegetables'
@@ -96,3 +60,17 @@ export const CATEGORIES: { value: ProductCategory; label: string; icon: string }
   { value: 'herbs', label: 'Herbs', icon: '🌿' },
   { value: 'meat', label: 'Meat', icon: '🥩' },
 ];
+
+export const getAvailabilityStatus = (quantity: number): AvailabilityStatus => {
+  if (quantity <= 0) return 'Out of Stock';
+  if (quantity <= 10) return 'Limited';
+  return 'In Stock';
+};
+
+export const getAvailabilityColor = (status: AvailabilityStatus): string => {
+  switch (status) {
+    case 'In Stock': return 'bg-green-100 text-green-800';
+    case 'Limited': return 'bg-amber-100 text-amber-800';
+    case 'Out of Stock': return 'bg-red-100 text-red-800';
+  }
+};

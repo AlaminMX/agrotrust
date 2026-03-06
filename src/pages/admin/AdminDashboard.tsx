@@ -6,17 +6,12 @@ import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BackButton } from '@/components/ui/BackButton';
-import { Clock, CheckCircle, BarChart3, Users } from 'lucide-react';
-
-interface DashboardStats {
-  pendingVerifications: number;
-  totalFarmers: number;
-}
+import { Clock, CheckCircle, Users, Flag } from 'lucide-react';
 
 export default function AdminDashboard() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState<DashboardStats>({ pendingVerifications: 0, totalFarmers: 0 });
+  const [stats, setStats] = useState({ pendingVerifications: 0, totalFarmers: 0, pendingReports: 0 });
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -27,27 +22,25 @@ export default function AdminDashboard() {
       if (!roleData) return navigate('/');
       setIsAdmin(true);
 
-      const [pendingVerificationsRes, totalFarmersRes] = await Promise.all([
+      const [pendingRes, farmersRes, reportsRes] = await Promise.all([
         supabase.from('farmer_profiles').select('id', { count: 'exact', head: true }).in('verification_status', ['pending', 'under_review']),
         supabase.from('farmer_profiles').select('id', { count: 'exact', head: true }).eq('verification_status', 'approved'),
+        supabase.from('listing_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending') as any,
       ]);
 
-      setStats({ pendingVerifications: pendingVerificationsRes.count || 0, totalFarmers: totalFarmersRes.count || 0 });
+      setStats({ pendingVerifications: pendingRes.count || 0, totalFarmers: farmersRes.count || 0, pendingReports: reportsRes.count || 0 });
       setLoading(false);
     };
-
     if (!authLoading) checkAdminAndFetchStats();
   }, [user, authLoading, navigate]);
 
-  if (authLoading || loading) {
-    return <Layout><div className="flex items-center justify-center min-h-[60vh]"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div></Layout>;
-  }
+  if (authLoading || loading) return <Layout><div className="flex items-center justify-center min-h-[60vh]"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div></Layout>;
   if (!isAdmin) return null;
 
   const statCards = [
     { title: 'Pending Verifications', value: stats.pendingVerifications, icon: Clock, color: 'text-amber-600', bgColor: 'bg-amber-100', link: '/admin/verifications' },
     { title: 'Verified Farmers', value: stats.totalFarmers, icon: CheckCircle, color: 'text-primary', bgColor: 'bg-green-100', link: '/admin/verifications' },
-    { title: 'Analytics Dashboard', value: 'Charts', icon: BarChart3, color: 'text-blue-600', bgColor: 'bg-blue-100', link: '/admin/analytics' },
+    { title: 'Pending Reports', value: stats.pendingReports, icon: Flag, color: 'text-red-600', bgColor: 'bg-red-100', link: '/admin/reports' },
     { title: 'User Management', value: 'Manage', icon: Users, color: 'text-purple-600', bgColor: 'bg-purple-100', link: '/admin/users' },
   ];
 
@@ -56,9 +49,8 @@ export default function AdminDashboard() {
       <div className="container py-8">
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2"><BackButton fallbackPath="/" /><h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1></div>
-          <p className="text-muted-foreground mt-1 ml-12">Manage farmers and monitor platform health.</p>
+          <p className="text-muted-foreground mt-1 ml-12">Manage farmers, reports, and platform health.</p>
         </div>
-
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
           {statCards.map((stat) => (
             <Link key={stat.title} to={stat.link}>
@@ -72,12 +64,11 @@ export default function AdminDashboard() {
             </Link>
           ))}
         </div>
-
         <Card>
           <CardHeader><CardTitle>Quick Actions</CardTitle></CardHeader>
           <CardContent className="flex flex-wrap gap-3">
             <Button asChild><Link to="/admin/verifications">Review Farmer Applications</Link></Button>
-            <Button variant="outline" asChild><Link to="/admin/analytics">Open Analytics Charts</Link></Button>
+            <Button variant="outline" asChild><Link to="/admin/reports">Reports Inbox</Link></Button>
             <Button variant="outline" asChild><Link to="/admin/users">User Management</Link></Button>
             <Button variant="outline" asChild><Link to="/admin/products">Products</Link></Button>
           </CardContent>
