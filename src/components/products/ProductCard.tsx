@@ -13,8 +13,14 @@ export const ProductCard = ({ product, showState = false }: ProductCardProps) =>
   const stateLabel = product.state && product.state !== 'all' ? STATES.find(s => s.value === product.state)?.label : null;
   const productUrl = `/products/id/${product.id}`;
 
+  const productUrl = `/products/${product.state}/${product.slug || product.id}`;
+
   return (
-    <Link to={productUrl} className="group block overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:shadow-card-hover hover:border-primary/20">
+    <Link
+      to={productUrl}
+      className="group block overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:shadow-card-hover hover:border-primary/20"
+    >
+      {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         <img src={product.image} alt={product.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
         {product.isVerified && (

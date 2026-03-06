@@ -67,16 +67,11 @@ const ProductDetail = () => {
       }
       setLoading(true);
       try {
-        const query = supabase.from('products').select('*');
-        let { data: productData, error: productError } = slug
-          ? await query.eq('slug', slug).maybeSingle()
-          : await query.eq('id', id).maybeSingle();
-
-        if ((productError?.code === '42703' || productError?.message?.toLowerCase().includes('slug')) && id) {
-          const fallback = await supabase.from('products').select('*').eq('id', id).maybeSingle();
-          productData = fallback.data;
-          productError = fallback.error;
-        }
+        const selectFields = 'id, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id, is_negotiable, listing_status';
+        const query = supabase.from('products').select(selectFields);
+        const { data: productData, error: productError } = id
+          ? await query.eq('id', id).maybeSingle()
+          : await query.maybeSingle();
 
         if (productError) throw productError;
         if (!productData) { setLoading(false); return; }

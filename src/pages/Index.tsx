@@ -7,6 +7,7 @@ import { TrustBanner } from '@/components/home/TrustBanner';
 import { BecomeFarmerCTA } from '@/components/home/BecomeFarmerCTA';
 import { LocationBanner } from '@/components/home/LocationBanner';
 import { LocationSelectionModal } from '@/components/home/LocationSelectionModal';
+import { BrowseByStateSection } from '@/components/home/BrowseByStateSection';
 
 const Index = () => {
   return (
@@ -16,6 +17,7 @@ const Index = () => {
       <BannerCarousel />
       <TrustBanner />
       <CategoryGrid />
+      <BrowseByStateSection />
       <FlashDeals />
       <FeaturedProductsSection />
       <BecomeFarmerCTA />

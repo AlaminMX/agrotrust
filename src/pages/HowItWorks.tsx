@@ -13,13 +13,18 @@ const features = [
   },
   {
     icon: Users,
-    title: 'Browse by State & Category',
-    description: 'Guests can explore produce listings openly and filter by state, category, and availability.',
+    title: 'Direct Connection',
+    description: 'Farmers manage their own listings directly, including stock, pricing, and listing status. Buyers can shop confidently with full visibility.',
   },
   {
-    icon: Phone,
-    title: 'Direct Contact',
-    description: 'Buyers connect directly with farmers through WhatsApp, call, or email—no checkout in the app.',
+    icon: Truck,
+    title: 'Platform Logistics',
+    description: 'Buyers browse by location to see what can be delivered nearby, while farmers list produce with clear availability and status.',
+  },
+  {
+    icon: Star,
+    title: 'Ratings & Reviews',
+    description: 'See genuine reviews from other buyers. Rate your experience to help the community make informed decisions.',
   },
 ];
 
@@ -53,7 +58,7 @@ const HowItWorks = () => {
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">How AgroTrust Works</h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Discover produce, verify trusted farmers, and connect directly.
+              A trusted produce marketplace for buyers and farmers. Learn how listings, delivery, and protected payments work together.
             </p>
           </div>
         </div>
@@ -103,8 +108,13 @@ const HowItWorks = () => {
 
       <section className="py-20">
         <div className="container text-center">
-          <h2 className="text-3xl font-bold text-foreground mb-4">Ready to browse listings?</h2>
-          <Link to="/products"><Button size="lg">Browse Products</Button></Link>
+          <h2 className="text-3xl font-bold text-foreground mb-4">Ready to Start Buying or Listing?</h2>
+          <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
+            Shop fresh produce or join as a farmer to create listings and grow your reach.
+          </p>
+          <Link to="/products">
+            <Button size="lg">Browse Products</Button>
+          </Link>
         </div>
       </section>
     </Layout>

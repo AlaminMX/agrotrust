@@ -41,7 +41,6 @@ export default function EditProduct() {
   const [isActive, setIsActive] = useState(true);
   const [isNegotiable, setIsNegotiable] = useState(false);
   const [listingStatus, setListingStatus] = useState('published');
-  const [availabilityStatus, setAvailabilityStatus] = useState<'In Stock' | 'Limited' | 'Out of Stock'>('In Stock');
   const [productImage, setProductImage] = useState<File | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [productState, setProductState] = useState('');
@@ -67,7 +66,6 @@ export default function EditProduct() {
     setIsNegotiable(data.is_negotiable ?? false);
     setListingStatus(data.listing_status || (data.is_active ? 'published' : 'draft'));
     setCurrentImageUrl(data.image_url);
-    setAvailabilityStatus((data.availability_status || 'In Stock') as 'In Stock' | 'Limited' | 'Out of Stock');
     setProductState(data.state || '');
     setLoading(false);
   };
@@ -86,18 +84,22 @@ export default function EditProduct() {
     setIsSubmitting(true);
     try {
       let imageUrl = currentImageUrl;
-      if (productImage) imageUrl = await uploadImage(await compressImage(productImage));
+      if (productImage) imageUrl = await uploadImage(productImage);
       const salePrice = parseFloat(price);
+      const origPrice = originalPrice ? parseFloat(originalPrice) : null;
+      const discountPct = origPrice && origPrice > salePrice ? Math.round(((origPrice - salePrice) / origPrice) * 100) : 0;
       const normalizedStatus = isActive ? 'published' : listingStatus === 'published' ? 'paused' : listingStatus;
 
       const { error } = await supabase.from('products').update({
         name,
         description,
         price: salePrice,
+        original_price: origPrice,
+        discount_percentage: discountPct,
         unit,
         category,
         available_quantity: parseInt(availableQuantity),
-        availability_status: availabilityStatus,
+        weight_kg: parseFloat(weightKg) || 1,
         image_url: imageUrl,
         is_active: isActive,
         is_negotiable: isNegotiable,
@@ -107,8 +109,8 @@ export default function EditProduct() {
       if (error) throw error;
       toast({ title: 'Product Updated!', description: 'Your changes have been saved.' });
       navigate('/farmer/dashboard');
-    } catch (error: unknown) {
-      toast({ title: 'Failed to update product', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
+    } catch (error: any) {
+      toast({ title: 'Failed to update product', description: error.message, variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
@@ -120,8 +122,8 @@ export default function EditProduct() {
       if (error) throw error;
       toast({ title: 'Product Deleted', description: 'The product has been removed.' });
       navigate('/farmer/dashboard');
-    } catch (error: unknown) {
-      toast({ title: 'Failed to delete product', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
+    } catch (error: any) {
+      toast({ title: 'Failed to delete product', description: error.message, variant: 'destructive' });
     }
   };
 
@@ -159,21 +161,7 @@ export default function EditProduct() {
                 </Select>
               </div>
 
-
-              <div className="space-y-2">
-                <Label htmlFor="availabilityStatus">Availability</Label>
-                <Select value={availabilityStatus} onValueChange={(v: 'In Stock' | 'Limited' | 'Out of Stock') => setAvailabilityStatus(v)}>
-                  <SelectTrigger id="availabilityStatus"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="In Stock">In Stock</SelectItem>
-                    <SelectItem value="Limited">Limited</SelectItem>
-                    <SelectItem value="Out of Stock">Out of Stock</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               <div className="space-y-2"><Label htmlFor="name">Product Name *</Label><Input id="name" value={name} onChange={(e) => setName(e.target.value)} required /></div>
-              <div className="space-y-2"><Label htmlFor="state">Listing State *</Label><Input id="state" value={productState} readOnly className="bg-muted" /><p className="text-xs text-muted-foreground">State follows your verified farmer location.</p></div>
               <div className="space-y-2"><Label htmlFor="description">Description</Label><Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} /></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label htmlFor="category">Category *</Label><Select value={category} onValueChange={setCategory} required><SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger><SelectContent>{CATEGORIES.map((cat) => <SelectItem key={cat.value} value={cat.value}>{cat.icon} {cat.label}</SelectItem>)}</SelectContent></Select></div>
@@ -181,9 +169,11 @@ export default function EditProduct() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label htmlFor="price">Sale Price (₦) *</Label><Input id="price" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} required /></div>
+                <div className="space-y-2"><Label htmlFor="originalPrice">Original Price (₦)</Label><Input id="originalPrice" type="number" min="0" step="0.01" value={originalPrice} onChange={(e) => setOriginalPrice(e.target.value)} /></div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label htmlFor="quantity">Available Quantity *</Label><Input id="quantity" type="number" min="0" value={availableQuantity} onChange={(e) => setAvailableQuantity(e.target.value)} required /></div>
+                <div className="space-y-2"><Label htmlFor="weight">Weight per Unit (kg) *</Label><Input id="weight" type="number" min="0.1" step="0.1" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} required /></div>
               </div>
 
               <div className="space-y-3">
