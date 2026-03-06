@@ -52,7 +52,7 @@ export const FeaturedProductsSection = () => {
         .from('farmer_profiles_public')
         .select('id, farm_name, verification_status, state')
         .in('id', farmerIds)
-        .eq('verification_status', 'approved');
+        .eq('verification_status', 'verified');
 
       // Create farmer lookup map
       const farmerMap = new Map<string, { farm_name: string | null; verification_status: string | null; state: string | null }>();
@@ -81,7 +81,7 @@ export const FeaturedProductsSection = () => {
             farmerId: p.farmer_id,
             farmerName: farmer.farm_name || 'Unknown',
             farmName: farmer.farm_name || 'Unknown Farm',
-            isVerified: farmer.verification_status === 'approved',
+            isVerified: farmer.verification_status === 'verified',
             rating: p.average_rating || 4.5,
             reviewCount: p.review_count || 0,
             available: p.available_quantity,
