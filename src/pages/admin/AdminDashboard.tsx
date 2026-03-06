@@ -6,7 +6,7 @@ import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BackButton } from '@/components/ui/BackButton';
-import { Clock, CheckCircle, Users, Flag } from 'lucide-react';
+import { Clock, CheckCircle, BarChart3, Users } from 'lucide-react';
 
 interface DashboardStats {
   pendingVerifications: number;
@@ -47,7 +47,7 @@ export default function AdminDashboard() {
   const statCards = [
     { title: 'Pending Verifications', value: stats.pendingVerifications, icon: Clock, color: 'text-amber-600', bgColor: 'bg-amber-100', link: '/admin/verifications' },
     { title: 'Verified Farmers', value: stats.totalFarmers, icon: CheckCircle, color: 'text-primary', bgColor: 'bg-green-100', link: '/admin/verifications' },
-    { title: 'Reports Inbox', value: 'Review', icon: Flag, color: 'text-blue-600', bgColor: 'bg-blue-100', link: '/admin/reports' },
+    { title: 'Analytics Dashboard', value: 'Charts', icon: BarChart3, color: 'text-blue-600', bgColor: 'bg-blue-100', link: '/admin/analytics' },
     { title: 'User Management', value: 'Manage', icon: Users, color: 'text-purple-600', bgColor: 'bg-purple-100', link: '/admin/users' },
   ];
 
@@ -77,9 +77,9 @@ export default function AdminDashboard() {
           <CardHeader><CardTitle>Quick Actions</CardTitle></CardHeader>
           <CardContent className="flex flex-wrap gap-3">
             <Button asChild><Link to="/admin/verifications">Review Farmer Applications</Link></Button>
+            <Button variant="outline" asChild><Link to="/admin/analytics">Open Analytics Charts</Link></Button>
             <Button variant="outline" asChild><Link to="/admin/users">User Management</Link></Button>
             <Button variant="outline" asChild><Link to="/admin/products">Products</Link></Button>
-            <Button variant="outline" asChild><Link to="/admin/reports">Reports Inbox</Link></Button>
           </CardContent>
         </Card>
       </div>

@@ -35,7 +35,6 @@ export default function AddProduct() {
   const [imageError, setImageError] = useState(false);
   const [isNegotiable, setIsNegotiable] = useState(false);
   const [listingStatus, setListingStatus] = useState('published');
-  const [availabilityStatus, setAvailabilityStatus] = useState<'In Stock' | 'Limited' | 'Out of Stock'>('In Stock');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -321,19 +320,6 @@ export default function AddProduct() {
                       <SelectItem value="published">Published</SelectItem>
                       <SelectItem value="draft">Draft</SelectItem>
                       <SelectItem value="paused">Paused</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-
-                <div className="space-y-2">
-                  <Label htmlFor="availabilityStatus">Availability</Label>
-                  <Select value={availabilityStatus} onValueChange={(v: 'In Stock' | 'Limited' | 'Out of Stock') => setAvailabilityStatus(v)}>
-                    <SelectTrigger id="availabilityStatus"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="In Stock">In Stock</SelectItem>
-                      <SelectItem value="Limited">Limited</SelectItem>
-                      <SelectItem value="Out of Stock">Out of Stock</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

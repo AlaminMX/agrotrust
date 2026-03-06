@@ -34,14 +34,20 @@ const Products = () => {
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [products, setProducts] = useState<ProductWithFarmer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [availability, setAvailability] = useState<'all' | 'In Stock' | 'Limited' | 'Out of Stock'>('all');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [minRating, setMinRating] = useState<number | null>(null);
   const requestIdRef = useRef(0);
+  const lastToastStateRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (routeState && STATES.some(s => s.value === routeState)) {
       setSelectedState(routeState);
       return;
+    }
+    const stateParam = searchParams.get('state') as State;
+    if (stateParam && STATES.some(s => s.value === stateParam)) {
+      setSelectedState(stateParam);
     }
     const stateParam = searchParams.get('state') as State;
     if (stateParam && STATES.some(s => s.value === stateParam)) setSelectedState(stateParam);
@@ -60,22 +66,29 @@ const Products = () => {
     const fetchProducts = async () => {
       const requestId = ++requestIdRef.current;
       setLoading(true);
+      let query = supabase
+        .from('products').select('id, name, description, price, unit, category, image_url, available_quantity, average_rating, review_count, state, farmer_id')
+        .eq('is_active', true);
 
-      const query = supabase.from('products').select('id, name, description, price, unit, category, image_url, available_quantity, state, farmer_id, availability_status').eq('is_active', true);
-      const { data: productsData, error } = selectedState !== 'all' ? await query.eq('state', selectedState) : await query;
-
-      if (requestId !== requestIdRef.current) return;
-      if (error) {
-        console.error(error);
-        toast.error('Failed to load listings');
-        setProducts([]);
-        setLoading(false);
-        return;
+      if (selectedState !== 'all') {
+        query = query.eq('state', selectedState);
       }
 
-      const farmerIds = [...new Set((productsData || []).map(p => p.farmer_id))];
-      const { data: farmersData } = await supabase.from('farmer_profiles_public').select('id, farm_name, state, verification_status, user_id').in('id', farmerIds);
-      const farmerMap = new Map((farmersData || []).map(f => [f.id, f]));
+      const { data: productsData, error } = await query;
+
+      if (error) { console.error(error); toast.error('Failed to load listings'); setLoading(false); return; }
+      if (!productsData?.length) { setProducts([]); setLoading(false); return; }
+
+      const farmerIds = [...new Set(productsData.map(p => p.farmer_id))];
+      const { data: farmersData, error: farmersError } = await supabase
+        .from('farmer_profiles_public')
+        .select('id, farm_name, state, verification_status, user_id')
+        .in('id', farmerIds)
+        .eq('verification_status', 'approved');
+
+      if (farmersError) {
+        console.warn('Farmer public profile lookup failed, falling back to product-only display:', farmersError.message);
+      }
 
       const nextProducts = (productsData || []).map((product) => ({
         ...(product as DatabaseProduct),
@@ -83,8 +96,8 @@ const Products = () => {
         farmer: farmerMap.get(product.farmer_id),
       }));
 
-      setProducts(nextProducts);
-      logActivity('product_feed_loaded', { state: selectedState, metadata: { count: nextProducts.length } });
+      setProducts(productsData.filter(p => farmerMap.has(p.farmer_id)).map(p => ({ ...p, farmer: farmerMap.get(p.farmer_id) })));
+      logActivity('product_feed_loaded', { state: selectedState, metadata: { count: productsData.length } });
       setLoading(false);
     };
     fetchProducts();
