@@ -13,17 +13,16 @@ import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import HowItWorks from "./pages/HowItWorks";
 import Auth from "./pages/Auth";
-import Onboarding from "./pages/Onboarding";
 import Profile from "./pages/Profile";
 import FarmerOnboarding from "./pages/farmer/FarmerOnboarding";
 import FarmerDashboard from "./pages/farmer/FarmerDashboard";
 import AddProduct from "./pages/farmer/AddProduct";
 import EditProduct from "./pages/farmer/EditProduct";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import FarmerVerifications from "./pages/admin/FarmerVerifications";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminReports from "./pages/admin/AdminReports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
