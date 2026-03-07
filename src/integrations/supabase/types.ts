@@ -351,6 +351,7 @@ export type Database = {
         Args: { _farmer_id: string }
         Returns: {
           address: string
+          area: string
           created_at: string
           farm_description: string
           farm_name: string
