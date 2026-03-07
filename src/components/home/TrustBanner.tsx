@@ -1,25 +1,25 @@
-import { Shield, Users, MessageCircle, Leaf } from 'lucide-react';
+import { ShieldCheck, Users, MessageCircle, Leaf } from 'lucide-react';
 
 const trustItems = [
-  { icon: Shield, title: 'Verified Farmers', description: 'All farmers are vetted and approved' },
-  { icon: Users, title: 'Direct Connection', description: 'No middlemen. No hidden fees' },
-  { icon: MessageCircle, title: 'Direct Contact', description: 'Chat directly via WhatsApp or call' },
-  { icon: Leaf, title: 'Fresh Produce', description: 'Direct from farm to your table' },
+  { icon: ShieldCheck, title: 'Verified Farmers', description: 'ID-checked & admin approved' },
+  { icon: Users, title: 'No Middlemen', description: 'Buy directly from the source' },
+  { icon: MessageCircle, title: 'Direct Contact', description: 'WhatsApp, call, or email' },
+  { icon: Leaf, title: 'Fresh & Local', description: 'Farm to your table' },
 ];
 
 export const TrustBanner = () => {
   return (
-    <section className="py-6 bg-primary/5 border-y border-border">
+    <section className="py-5 bg-card border-y border-border">
       <div className="container">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {trustItems.map((item, index) => (
             <div key={index} className="flex items-center gap-3">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <item.icon className="h-5 w-5 text-primary" />
+              <div className="shrink-0 w-9 h-9 rounded-lg bg-primary/8 flex items-center justify-center">
+                <item.icon className="h-4.5 w-4.5 text-primary" />
               </div>
-              <div>
-                <h3 className="font-semibold text-foreground text-sm">{item.title}</h3>
-                <p className="text-xs text-muted-foreground">{item.description}</p>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-foreground text-sm leading-tight">{item.title}</h3>
+                <p className="text-xs text-muted-foreground leading-tight">{item.description}</p>
               </div>
             </div>
           ))}
