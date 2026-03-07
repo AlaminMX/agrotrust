@@ -4,30 +4,28 @@ import { Product, STATES, getAvailabilityStatus, getAvailabilityColor } from '@/
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatPrice } from '@/lib/format';
+import { formatLocation } from '@/lib/location';
 
 interface ProductCardProps {
-  product: Product;
+  product: Product & { area?: string | null };
   showState?: boolean;
 }
 
 export const ProductCard = ({ product, showState = false }: ProductCardProps) => {
-  const stateLabel = product.state && product.state !== 'all' 
-    ? STATES.find(s => s.value === product.state)?.label 
-    : null;
   const availabilityStatus = getAvailabilityStatus(product.available);
   const availabilityColor = getAvailabilityColor(availabilityStatus);
 
   return (
     <Link
       to={`/products/id/${product.id}`}
-      className="group block overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:shadow-card-hover hover:border-primary/20"
+      className="group block overflow-hidden rounded-xl border border-border bg-card transition-all duration-200 hover:shadow-card-hover hover:border-primary/20"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         <img src={product.image} alt={product.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
         {product.isVerified && (
           <div className="absolute top-3 left-3">
-            <span className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground font-semibold px-2.5 py-1 rounded-full text-xs shadow-lg">
-              <ShieldCheck className="h-3.5 w-3.5" /> Verified Farmer
+            <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground font-semibold px-2.5 py-1 rounded-full text-xs shadow-sm">
+              <ShieldCheck className="h-3.5 w-3.5" /> Verified
             </span>
           </div>
         )}
@@ -36,11 +34,14 @@ export const ProductCard = ({ product, showState = false }: ProductCardProps) =>
         </div>
       </div>
 
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-2.5">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span className="font-medium text-earth">{product.farmName}</span>
-          {showState && stateLabel && (
-            <span className="flex items-center gap-1 text-primary font-medium"><MapPin className="h-3 w-3" />{stateLabel}</span>
+          <span className="font-medium truncate">{product.farmName}</span>
+          {showState && (
+            <span className="flex items-center gap-1 text-primary font-medium shrink-0 ml-2">
+              <MapPin className="h-3 w-3" />
+              {formatLocation(product.state, product.area)}
+            </span>
           )}
         </div>
 
@@ -51,7 +52,7 @@ export const ProductCard = ({ product, showState = false }: ProductCardProps) =>
             <span className="text-lg font-bold text-foreground">{formatPrice(product.price)}</span>
             <span className="text-sm text-muted-foreground">/{product.unit}</span>
           </div>
-          <Button size="sm" variant="secondary" className="rounded-full gap-1.5" onClick={(e) => e.preventDefault()}>
+          <Button size="sm" variant="outline" className="rounded-full gap-1.5 text-xs" onClick={(e) => e.preventDefault()}>
             <MessageCircle className="h-3.5 w-3.5" /> Contact
           </Button>
         </div>

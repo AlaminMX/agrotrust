@@ -1,30 +1,30 @@
 import { Link } from 'react-router-dom';
 
 const categories = [
-  { label: 'Vegetables', value: 'vegetables', icon: '🥬', color: 'bg-green-50 hover:bg-green-100' },
-  { label: 'Fruits', value: 'fruits', icon: '🍎', color: 'bg-red-50 hover:bg-red-100' },
-  { label: 'Grains', value: 'grains', icon: '🌾', color: 'bg-amber-50 hover:bg-amber-100' },
-  { label: 'Tubers', value: 'tubers', icon: '🥔', color: 'bg-orange-50 hover:bg-orange-100' },
-  { label: 'Poultry', value: 'poultry', icon: '🍗', color: 'bg-yellow-50 hover:bg-yellow-100' },
-  { label: 'Dairy', value: 'dairy', icon: '🥛', color: 'bg-blue-50 hover:bg-blue-100' },
-  { label: 'Herbs & Spices', value: 'herbs', icon: '🌿', color: 'bg-emerald-50 hover:bg-emerald-100' },
-  { label: 'Meat', value: 'meat', icon: '🥩', color: 'bg-rose-50 hover:bg-rose-100' },
+  { label: 'Vegetables', value: 'vegetables', icon: '🥬' },
+  { label: 'Fruits', value: 'fruits', icon: '🍎' },
+  { label: 'Grains', value: 'grains', icon: '🌾' },
+  { label: 'Tubers', value: 'tubers', icon: '🥔' },
+  { label: 'Poultry', value: 'poultry', icon: '🐔' },
+  { label: 'Dairy', value: 'dairy', icon: '🥛' },
+  { label: 'Herbs & Spices', value: 'herbs', icon: '🌿' },
+  { label: 'Meat', value: 'meat', icon: '🥩' },
 ];
 
 export const CategoryGrid = () => {
   return (
-    <section className="py-12">
+    <section className="py-10">
       <div className="container">
-        <h2 className="text-2xl font-bold text-foreground mb-6">Browse by Category</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-6">Browse by Category</h2>
+        <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-8 gap-3">
           {categories.map((cat) => (
             <Link
               key={cat.value}
               to={`/products?category=${cat.value}`}
-              className={`${cat.color} rounded-xl p-6 text-center transition-colors`}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border border-border hover:border-primary/30 hover:shadow-card transition-all duration-200 group"
             >
-              <span className="text-3xl mb-2 block">{cat.icon}</span>
-              <span className="font-medium text-foreground text-sm">{cat.label}</span>
+              <span className="text-2xl md:text-3xl group-hover:scale-110 transition-transform">{cat.icon}</span>
+              <span className="font-medium text-foreground text-xs text-center leading-tight">{cat.label}</span>
             </Link>
           ))}
         </div>

@@ -1,111 +1,55 @@
 import { State, STATES } from '@/types';
-import { MapPin, AlertTriangle, Globe } from 'lucide-react';
+import { MapPin, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
 interface StateBannerProps {
   selectedState: State;
   onStateChange: (state: State) => void;
-  hasItemsInCart?: boolean;
 }
 
-export const StateBanner = ({ selectedState, onStateChange, hasItemsInCart }: StateBannerProps) => {
+export const StateBanner = ({ selectedState, onStateChange }: StateBannerProps) => {
   const currentState = STATES.find(s => s.value === selectedState);
   const isAllStates = selectedState === 'all';
 
-  const handleStateChange = (newState: State) => {
-    onStateChange(newState);
-  };
-
   return (
-    <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 mb-6">
+      <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-            {isAllStates ? (
-              <Globe className="h-5 w-5 text-primary" />
-            ) : (
-              <MapPin className="h-5 w-5 text-primary" />
-            )}
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            {isAllStates ? <Globe className="h-4 w-4 text-primary" /> : <MapPin className="h-4 w-4 text-primary" />}
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">
-              {isAllStates ? 'Showing active listings from' : 'Showing listings available in'}
-            </p>
-            <p className="font-semibold text-lg">
-              {isAllStates ? 'All States in Nigeria' : `${currentState?.label}, Nigeria`}
+            <p className="text-xs text-muted-foreground">Showing listings in</p>
+            <p className="font-semibold text-foreground">
+              {isAllStates ? 'All Nigeria' : `${currentState?.label}, Nigeria`}
             </p>
           </div>
         </div>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              Change Delivery State
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="text-xs">
+              Change Location
             </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Change Delivery Location</AlertDialogTitle>
-              <AlertDialogDescription>
-                {hasItemsInCart ? (
-                  <span className="flex items-start gap-2 text-amber-600">
-                    <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
-                    <span>
-                      Changing your location will clear your cart as products are specific to each state.
-                    </span>
-                  </span>
-                ) : (
-                  'Select a state to view listings that can be delivered there, or choose "All Nigeria" to explore every active listing.'
-                )}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            
-            <div className="grid gap-2 py-4">
-              {STATES.map(state => (
-                <AlertDialogAction
-                  key={state.value}
-                  onClick={() => handleStateChange(state.value)}
-                  className={cn(
-                    "justify-start",
-                    selectedState === state.value && "bg-primary"
-                  )}
-                >
-                  {state.value === 'all' ? (
-                    <Globe className="h-4 w-4 mr-2" />
-                  ) : (
-                    <MapPin className="h-4 w-4 mr-2" />
-                  )}
-                  {state.label}
-                  {selectedState === state.value && ' (Current)'}
-                </AlertDialogAction>
-              ))}
-            </div>
-
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-card">
+            {STATES.map(state => (
+              <DropdownMenuItem
+                key={state.value}
+                onClick={() => onStateChange(state.value)}
+                className={cn(selectedState === state.value && "bg-primary/10 font-medium")}
+              >
+                {state.value === 'all' ? <Globe className="h-4 w-4 mr-2" /> : <MapPin className="h-4 w-4 mr-2" />}
+                {state.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      
-      <p className="text-xs text-muted-foreground mt-2">
-        {isAllStates 
-          ? 'Showing products from all states. When you checkout, delivery is only available within the farmer\'s state.'
-          : `These listings are currently deliverable within ${currentState?.label}. Switch location to discover listings in other states.`
-        }
-      </p>
     </div>
   );
 };
