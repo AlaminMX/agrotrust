@@ -16,7 +16,7 @@ export const FeaturedProductsSection = () => {
       setLoading(true);
       const { data: productsData } = await supabase
         .from('products')
-        .select('id, name, price, unit, category, image_url, available_quantity, state, area, farmer_id, is_negotiable')
+        .select('id, name, price, unit, category, image_url, available_quantity, state, farmer_id, is_negotiable')
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(16);
@@ -26,12 +26,11 @@ export const FeaturedProductsSection = () => {
       const farmerIds = [...new Set(productsData.map(p => p.farmer_id))];
       const { data: farmersData } = await supabase
         .from('farmer_profiles_public')
-        .select('id, farm_name, verification_status, state, area')
-        .in('id', farmerIds)
-        .eq('verification_status', 'approved');
+        .select('id, farm_name, verification_status, state') as any;
 
       const farmerMap = new Map<string, any>();
-      farmersData?.forEach(f => farmerMap.set(f.id!, f));
+      (farmersData || []).filter((f: any) => f.verification_status === 'approved')
+        .forEach((f: any) => farmerMap.set(f.id, f));
 
       const transformed = productsData
         .filter(p => farmerMap.has(p.farmer_id))
@@ -46,7 +45,7 @@ export const FeaturedProductsSection = () => {
             id: p.id, name: p.name, price: p.price, unit: p.unit,
             image_url: p.image_url, available_quantity: p.available_quantity,
             farm_name: farmer.farm_name, is_verified: farmer.verification_status === 'approved',
-            state: p.state || farmer.state, area: p.area || farmer.area,
+            state: p.state || farmer.state, area: farmer.area || null,
             is_negotiable: p.is_negotiable,
           };
         });
