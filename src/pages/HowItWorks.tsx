@@ -1,8 +1,7 @@
 import { Layout } from '@/components/layout/Layout';
 import { HowItWorksSection } from '@/components/home/HowItWorksSection';
-import { EscrowExplainer } from '@/components/home/EscrowExplainer';
 import { BackButton } from '@/components/ui/BackButton';
-import { Shield, Users, Truck, Star, HelpCircle } from 'lucide-react';
+import { Shield, Users, MessageCircle, ShieldCheck, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
@@ -10,89 +9,75 @@ const features = [
   {
     icon: Shield,
     title: 'Verified Farmers Only',
-    description: 'Every farmer on AgroTrust goes through a multi-step verification process. We check farm documentation, conduct virtual inspections, and verify identity before approval.',
+    description: 'Every farmer on AgroTrust goes through a multi-step verification process. We check farm documentation and verify identity before approval.',
   },
   {
     icon: Users,
     title: 'Direct Connection',
-    description: 'Farmers manage their own listings directly, including stock, pricing, and listing status. Buyers can shop confidently with full visibility.',
+    description: 'No middlemen. Contact farmers directly via WhatsApp, phone, or email. Negotiate prices and arrange pickup or delivery yourself.',
   },
   {
-    icon: Truck,
-    title: 'Platform Logistics',
-    description: 'Buyers browse by location to see what can be delivered nearby, while farmers list produce with clear availability and status.',
+    icon: MessageCircle,
+    title: 'WhatsApp Contact',
+    description: 'Reach farmers instantly via WhatsApp. Discuss produce quality, negotiate pricing, and arrange transactions directly.',
   },
   {
-    icon: Star,
-    title: 'Ratings & Reviews',
-    description: 'See genuine reviews from other buyers. Rate your experience to help the community make informed decisions.',
+    icon: ShieldCheck,
+    title: 'Trust & Transparency',
+    description: 'See verified badges, specific locations, and real farm information. Know exactly who you\'re buying from.',
   },
 ];
 
 const faqs = [
   {
-    question: 'What happens if my order arrives damaged?',
-    answer: 'If your produce arrives damaged or doesn\'t match what was ordered, you can raise a dispute before confirming delivery. Our team will investigate and ensure you\'re treated fairly—whether that means a refund, replacement, or partial compensation.',
+    question: 'How are farmers verified?',
+    answer: 'Farmers submit ID documents and farm details. Our team reviews each application, verifies identity, and approves only legitimate farmers.',
   },
   {
-    question: 'How long do deliveries take?',
-    answer: 'Delivery times vary by location. Orders within Abuja typically arrive within 24 hours. For Kaduna, Bauchi, and Kano, expect 1-3 business days depending on the farmer\'s location.',
+    question: 'How do I contact a farmer?',
+    answer: 'Every verified farmer has WhatsApp and phone contact buttons on their profile and product listings. Click to reach them directly.',
   },
   {
-    question: 'When do farmers get paid?',
-    answer: 'Farmers receive payment only after you confirm delivery. The funds are held securely in escrow from the moment you pay until you verify you\'ve received your order.',
+    question: 'Is it safe to buy directly from farmers?',
+    answer: 'AgroTrust verifies every farmer\'s identity and farm details. Look for the green verified badge. Always exercise caution with any direct transaction.',
   },
   {
-    question: 'Can I cancel an order?',
-    answer: 'You can cancel an order before the farmer marks it as "processing." Once the farmer begins preparing your order, cancellation may not be possible. Contact support for assistance.',
+    question: 'How do I become a verified farmer?',
+    answer: 'Click "Become a Verified Farmer" and submit your farm details and ID documents. Our team will review your application within 1-2 business days.',
   },
 ];
 
 const HowItWorks = () => {
   return (
     <Layout>
-      {/* Hero */}
-      <section className="py-16 bg-muted/30">
+      <section className="py-16 bg-secondary/50">
         <div className="container">
-          <div className="flex items-center gap-2 mb-6">
-            <BackButton fallbackPath="/" />
-          </div>
+          <div className="flex items-center gap-2 mb-6"><BackButton fallbackPath="/" /></div>
           <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-              How AgroTrust Works
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              A trusted produce marketplace for buyers and farmers. Learn how listings, delivery, and protected payments work together.
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Trust & Safety</h1>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              How AgroTrust ensures a safe, transparent marketplace connecting buyers directly with verified farmers.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Process Steps */}
       <HowItWorksSection />
 
-      {/* Escrow Explainer */}
-      <EscrowExplainer />
-
-      {/* Features */}
-      <section className="py-20">
+      <section className="py-16">
         <div className="container">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-4">Why Choose AgroTrust</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              We're not just another marketplace. We're infrastructure for fair agricultural trade.
-            </p>
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold text-foreground mb-3">Why Choose AgroTrust</h2>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {features.map(feature => (
-              <div key={feature.title} className="flex gap-4 p-6 bg-card rounded-xl border border-border">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <feature.icon className="h-6 w-6 text-primary" />
+              <div key={feature.title} className="flex gap-4 p-5 bg-card rounded-xl border border-border">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <feature.icon className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground mb-2">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground">{feature.description}</p>
+                  <h3 className="font-semibold text-foreground mb-1 text-sm">{feature.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
                 </div>
               </div>
             ))}
@@ -100,38 +85,35 @@ const HowItWorks = () => {
         </div>
       </section>
 
-      {/* FAQs */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-16 bg-card border-y border-border">
         <div className="container">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 bg-primary/10 rounded-full px-4 py-2 text-sm text-primary font-medium mb-4">
-              <HelpCircle className="h-4 w-4" />
-              FAQs
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 bg-primary/10 rounded-full px-4 py-1.5 text-sm text-primary font-medium mb-4">
+              <HelpCircle className="h-4 w-4" /> FAQs
             </div>
-            <h2 className="text-3xl font-bold text-foreground mb-4">Common Questions</h2>
+            <h2 className="text-2xl font-bold text-foreground">Common Questions</h2>
           </div>
-
-          <div className="max-w-3xl mx-auto space-y-4">
+          <div className="max-w-2xl mx-auto space-y-4">
             {faqs.map(faq => (
-              <div key={faq.question} className="bg-card rounded-xl border border-border p-6">
-                <h3 className="font-semibold text-foreground mb-2">{faq.question}</h3>
-                <p className="text-sm text-muted-foreground">{faq.answer}</p>
+              <div key={faq.question} className="bg-background rounded-xl border border-border p-5">
+                <h3 className="font-semibold text-foreground mb-2 text-sm">{faq.question}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{faq.answer}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-20">
+      <section className="py-16">
         <div className="container text-center">
-          <h2 className="text-3xl font-bold text-foreground mb-4">Ready to Start Buying or Listing?</h2>
-          <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-            Shop fresh produce or join as a farmer to create listings and grow your reach.
+          <h2 className="text-2xl font-bold text-foreground mb-4">Ready to Get Started?</h2>
+          <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
+            Browse fresh produce from verified farmers or join as a farmer to list your produce.
           </p>
-          <Link to="/products">
-            <Button size="lg">Browse Products</Button>
-          </Link>
+          <div className="flex items-center justify-center gap-3">
+            <Link to="/products"><Button size="lg">Browse Listings</Button></Link>
+            <Link to="/farmer/onboarding"><Button size="lg" variant="outline">Become a Farmer</Button></Link>
+          </div>
         </div>
       </section>
     </Layout>
