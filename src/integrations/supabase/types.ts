@@ -17,6 +17,7 @@ export type Database = {
       farmer_profiles: {
         Row: {
           address: string | null
+          area: string | null
           certification_urls: string[] | null
           created_at: string
           farm_description: string | null
@@ -38,6 +39,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          area?: string | null
           certification_urls?: string[] | null
           created_at?: string
           farm_description?: string | null
@@ -59,6 +61,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          area?: string | null
           certification_urls?: string[] | null
           created_at?: string
           farm_description?: string | null
@@ -146,6 +149,7 @@ export type Database = {
       }
       products: {
         Row: {
+          area: string | null
           available_quantity: number
           category: string
           created_at: string
@@ -163,6 +167,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          area?: string | null
           available_quantity?: number
           category: string
           created_at?: string
@@ -180,6 +185,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          area?: string | null
           available_quantity?: number
           category?: string
           created_at?: string
