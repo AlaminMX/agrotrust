@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { STATES } from '@/types';
+import { useStates } from '@/hooks/useStates';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const categories = [
@@ -23,6 +23,7 @@ const categories = [
 export const JumiaHeader = () => {
   const { selectedState, setSelectedState } = useCart();
   const { user, signOut } = useAuth();
+  const { allStates } = useStates();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,11 +57,11 @@ export const JumiaHeader = () => {
         <div className="container flex h-9 items-center justify-between text-xs">
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-1 hover:opacity-80 transition-opacity">
-              📍 {STATES.find(s => s.value === selectedState)?.label || 'All Nigeria'}
+              📍 {allStates.find(s => s.value === selectedState)?.label || 'All Nigeria'}
               <ChevronDown className="h-3 w-3" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="bg-card">
-              {STATES.map(state => (
+              {allStates.map(state => (
                 <DropdownMenuItem
                   key={state.value}
                   onClick={() => setSelectedState(state.value as typeof selectedState)}

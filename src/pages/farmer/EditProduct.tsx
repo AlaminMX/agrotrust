@@ -11,7 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowLeft, Upload, CheckCircle2, Leaf, Trash2 } from 'lucide-react';
-import { CATEGORIES } from '@/types';
+import { CATEGORIES, UNITS } from '@/types';
+import { ImageCropper } from '@/components/ui/ImageCropper';
+import { FarmerBottomNav } from '@/components/layout/FarmerBottomNav';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 export default function EditProduct() {
@@ -25,6 +27,7 @@ export default function EditProduct() {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [unit, setUnit] = useState('kg');
+  const [customUnit, setCustomUnit] = useState('');
   const [category, setCategory] = useState('');
   const [availableQuantity, setAvailableQuantity] = useState('');
   const [isActive, setIsActive] = useState(true);
@@ -32,6 +35,9 @@ export default function EditProduct() {
   const [listingStatus, setListingStatus] = useState('active');
   const [productImage, setProductImage] = useState<File | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => { if (!authLoading && !user) navigate('/auth'); }, [user, authLoading, navigate]);
   useEffect(() => { if (user && id) loadProduct(); }, [user, id]);
@@ -40,11 +46,29 @@ export default function EditProduct() {
     const { data } = await supabase.from('products').select('*').eq('id', id).single();
     if (!data) return navigate('/farmer/dashboard');
     setName(data.name); setDescription(data.description || ''); setPrice(data.price.toString());
-    setUnit(data.unit); setCategory(data.category);
+    // Check if unit is in UNITS list, if not it's custom
+    const isKnownUnit = UNITS.some(u => u.value === data.unit);
+    if (isKnownUnit) { setUnit(data.unit); } else { setUnit('custom'); setCustomUnit(data.unit); }
+    setCategory(data.category);
     setAvailableQuantity(data.available_quantity.toString());
     setIsActive(data.is_active); setIsNegotiable(data.is_negotiable ?? false);
     setListingStatus(data.listing_status || 'active');
     setCurrentImageUrl(data.image_url); setLoading(false);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => { setRawImageSrc(reader.result as string); setCropperOpen(true); };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCropComplete = (blob: Blob) => {
+    const file = new File([blob], 'product-image.jpg', { type: 'image/jpeg' });
+    setProductImage(file);
+    setImagePreview(URL.createObjectURL(blob));
   };
 
   const uploadImage = async (file: File) => {
@@ -57,12 +81,14 @@ export default function EditProduct() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const finalUnit = unit === 'custom' ? customUnit : unit;
+    if (!finalUnit) { toast({ title: 'Unit Required', variant: 'destructive' }); return; }
     setIsSubmitting(true);
     try {
       let imageUrl = currentImageUrl;
       if (productImage) imageUrl = await uploadImage(productImage);
       const { error } = await supabase.from('products').update({
-        name, description, price: parseFloat(price), unit, category,
+        name, description, price: parseFloat(price), unit: finalUnit, category,
         available_quantity: parseInt(availableQuantity),
         image_url: imageUrl, is_active: isActive, is_negotiable: isNegotiable, listing_status: listingStatus,
       }).eq('id', id);
@@ -88,7 +114,7 @@ export default function EditProduct() {
   if (authLoading || loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-16 lg:pb-0">
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/farmer/dashboard')}><ArrowLeft className="h-5 w-5" /></Button>
@@ -124,7 +150,14 @@ export default function EditProduct() {
               <div className="space-y-2"><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} /></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Category *</Label><Select value={category} onValueChange={setCategory}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.icon} {c.label}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-2"><Label>Unit *</Label><Select value={unit} onValueChange={setUnit}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="kg">Kilogram</SelectItem><SelectItem value="piece">Piece</SelectItem><SelectItem value="bunch">Bunch</SelectItem><SelectItem value="basket">Basket</SelectItem><SelectItem value="bag">Bag</SelectItem><SelectItem value="crate">Crate</SelectItem></SelectContent></Select></div>
+                <div className="space-y-2">
+                  <Label>Unit *</Label>
+                  <Select value={unit} onValueChange={setUnit}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{UNITS.map(u => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                  {unit === 'custom' && <Input value={customUnit} onChange={e => setCustomUnit(e.target.value)} placeholder="Enter custom unit" className="mt-2" />}
+                </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Price (₦) *</Label><Input type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} required /></div>
@@ -132,10 +165,11 @@ export default function EditProduct() {
               </div>
               <div className="space-y-3">
                 <Label>Product Image</Label>
-                {currentImageUrl && !productImage && <img src={currentImageUrl} alt="Current" className="h-32 w-32 object-cover rounded-xl" />}
+                {(imagePreview || currentImageUrl) && !productImage && currentImageUrl && <img src={currentImageUrl} alt="Current" className="h-32 w-32 object-cover rounded-xl" />}
+                {imagePreview && <img src={imagePreview} alt="New" className="h-32 w-32 object-cover rounded-xl" />}
                 <div className="border-2 border-dashed rounded-xl p-6 text-center transition-colors hover:border-primary/30">
                   {productImage ? <div className="flex items-center justify-center gap-2 text-primary"><CheckCircle2 className="h-5 w-5" /><span className="text-sm">{productImage.name}</span></div> : <div className="text-muted-foreground"><Upload className="h-8 w-8 mx-auto mb-2" /><p className="text-sm">Upload new image</p></div>}
-                  <Input type="file" accept="image/*" className="mt-4" onChange={(e) => setProductImage(e.target.files?.[0] || null)} />
+                  <Input type="file" accept="image/*" className="mt-4" onChange={handleImageChange} />
                 </div>
               </div>
               <div className="flex gap-4 pt-4">
@@ -146,6 +180,8 @@ export default function EditProduct() {
           </CardContent>
         </Card>
       </main>
+      {rawImageSrc && <ImageCropper imageSrc={rawImageSrc} open={cropperOpen} onClose={() => setCropperOpen(false)} onCropComplete={handleCropComplete} />}
+      <FarmerBottomNav />
     </div>
   );
 }

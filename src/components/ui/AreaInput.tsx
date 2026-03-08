@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-import { getAreaSuggestions } from '@/data/nigerianAreas';
+import { useAreaSuggestions } from '@/hooks/useAreaSuggestions';
 import { cn } from '@/lib/utils';
 import { MapPin } from 'lucide-react';
 
@@ -14,12 +14,9 @@ interface AreaInputProps {
 
 export const AreaInput = ({ value, onChange, state, placeholder = 'e.g., Gwarimpa', className }: AreaInputProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const wrapperRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setSuggestions(getAreaSuggestions(state, value));
-  }, [state, value]);
+  const { getFilteredAreas } = useAreaSuggestions(state);
+  const suggestions = getFilteredAreas(value);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

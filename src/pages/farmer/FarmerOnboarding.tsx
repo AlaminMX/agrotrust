@@ -11,8 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, CheckCircle2, ArrowRight, ArrowLeft, Leaf } from 'lucide-react';
-import { STATES, CATEGORIES } from '@/types';
+import { CATEGORIES } from '@/types';
 import { AreaInput } from '@/components/ui/AreaInput';
+import { useStates } from '@/hooks/useStates';
+import { normalizeNigerianPhone } from '@/lib/phone';
+import { FarmerBottomNav } from '@/components/layout/FarmerBottomNav';
 
 type Step = 'details' | 'documents' | 'review';
 
@@ -33,8 +36,9 @@ export default function FarmerOnboarding() {
   const [produceTypes, setProduceTypes] = useState<string[]>([]);
   const [whatsappPhone, setWhatsappPhone] = useState('');
   const [secondaryPhone, setSecondaryPhone] = useState('');
+  const [farmerEmail, setFarmerEmail] = useState('');
   const [yearsExperience, setYearsExperience] = useState('');
-  const [contactVisibilityConsent, setContactVisibilityConsent] = useState(false);
+  const { states } = useStates();
 
   const [idDocument, setIdDocument] = useState<File | null>(null);
   const [farmRegistration, setFarmRegistration] = useState<File | null>(null);
@@ -90,8 +94,9 @@ export default function FarmerOnboarding() {
         state, area: area || null, address,
         farm_size: farmSize,
         produce_types: produceTypes,
-        whatsapp_phone: whatsappPhone || null,
-        secondary_phone: secondaryPhone || null,
+        whatsapp_phone: normalizeNigerianPhone(whatsappPhone) || null,
+        secondary_phone: normalizeNigerianPhone(secondaryPhone) || null,
+        email: farmerEmail || null,
         years_of_experience: yearsExperience ? parseInt(yearsExperience) : null,
         id_document_url: idDocUrl,
         farm_registration_url: farmRegUrl,
@@ -167,9 +172,10 @@ export default function FarmerOnboarding() {
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2">Contact Information</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2"><Label>WhatsApp Phone *</Label><Input value={whatsappPhone} onChange={(e) => setWhatsappPhone(e.target.value)} placeholder="+234..." /></div>
-                    <div className="space-y-2"><Label>Secondary Phone</Label><Input value={secondaryPhone} onChange={(e) => setSecondaryPhone(e.target.value)} placeholder="+234..." /></div>
+                    <div className="space-y-2"><Label>WhatsApp Number *</Label><Input value={whatsappPhone} onChange={(e) => setWhatsappPhone(e.target.value)} placeholder="08012345678" /></div>
+                    <div className="space-y-2"><Label>Call Number</Label><Input value={secondaryPhone} onChange={(e) => setSecondaryPhone(e.target.value)} placeholder="08012345678" /></div>
                   </div>
+                  <div className="space-y-2"><Label>Email Address</Label><Input type="email" value={farmerEmail} onChange={(e) => setFarmerEmail(e.target.value)} placeholder="farmer@example.com" /></div>
                 </div>
 
                 {/* Farm Info */}
@@ -203,7 +209,7 @@ export default function FarmerOnboarding() {
                       <Select value={state} onValueChange={(v) => { setState(v); setArea(''); }}>
                         <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
                         <SelectContent className="bg-card border z-50">
-                          {STATES.filter(s => s.value !== 'all').map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                          {states.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -228,13 +234,8 @@ export default function FarmerOnboarding() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2 pt-2">
-                  <Checkbox id="consent" checked={contactVisibilityConsent} onCheckedChange={(c) => setContactVisibilityConsent(!!c)} />
-                  <Label htmlFor="consent" className="text-sm cursor-pointer leading-relaxed">I agree that my WhatsApp and phone number will be visible to buyers on my profile</Label>
-                </div>
-
                 <Button onClick={() => {
-                  if (!farmName || !state || !address || !whatsappPhone || !contactVisibilityConsent) {
+                  if (!farmName || !state || !address || !whatsappPhone) {
                     toast({ title: 'Missing Fields', description: 'Please fill in all required fields', variant: 'destructive' }); return;
                   }
                   setStep('documents');
@@ -294,6 +295,7 @@ export default function FarmerOnboarding() {
           )}
         </Card>
       </div>
+      <FarmerBottomNav />
     </div>
   );
 }
