@@ -92,6 +92,33 @@ export default function FarmerDashboard() {
     }
   };
 
+  const saveLocationInfo = async () => {
+    if (!farmerProfile || !editState) {
+      toast({ title: 'State is required', variant: 'destructive' });
+      return;
+    }
+    setSavingLocation(true);
+    try {
+      const { error } = await supabase.from('farmer_profiles').update({
+        state: editState,
+        area: editArea || null,
+      }).eq('id', farmerProfile.id);
+      if (error) throw error;
+      // Also update all farmer's products to match new location
+      await supabase.from('products').update({
+        state: editState,
+        area: editArea || null,
+      }).eq('farmer_id', farmerProfile.id);
+      toast({ title: 'Location updated' });
+      setEditingLocation(false);
+      loadFarmerData();
+    } catch (error: any) {
+      toast({ title: 'Failed to update location', description: error.message, variant: 'destructive' });
+    } finally {
+      setSavingLocation(false);
+    }
+  };
+
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
