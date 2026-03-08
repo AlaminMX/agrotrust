@@ -1,246 +1,253 @@
 
 
-# AgroTrust MVP Refactor Plan
+# AgroTrust Functional + UX Improvement Plan
 
-## Classification Summary
-
-After scanning the full project, here is the classification:
-
-### DELETE
-- **Pages**: `Onboarding.tsx` (escrow/delivery messaging), `AdminAnalytics.tsx` (order/revenue analytics)
-- **Components**: `reviews/` folder (all 4 files), `home/FlashDeals.tsx` (fake countdown timer), `home/HeroSection.tsx` (unused, BannerCarousel used instead), `home/FeaturedProducts.tsx` (if exists, unused), `home/TrustStats.tsx` (unused), `admin/OrderTrendsChart.tsx`, `admin/RevenueChart.tsx`, `admin/TopProductsChart.tsx`, `admin/CategoryDistributionChart.tsx`, `admin/FarmerPerformanceTable.tsx`
-- **Edge Functions**: `calculate-delivery-fee`, `confirm-delivery`, `create-transfer-recipient`, `paystack-initialize`, `paystack-verify`, `paystack-webhook`, `release-escrow`, `send-payout-notification`, `verify-bank-account`
-- **Other**: `src/data/mockData.ts` (unused mock data)
-- **Types**: `CartItem`, `Order`, `TrackingEvent`, `OrderStatus` from `types/index.ts`; `slug` from `Product` interface
-
-### FIX / REFACTOR
-- **types/index.ts**: Remove dead types, remove `rating`/`reviewCount` from Product, add `availability` field
-- **ProductDetail.tsx**: Remove reviews section, remove star ratings, remove `slug` reference, add farmer profile page link
-- **Products.tsx**: Remove rating sort/filter, add verified-only filter, add availability filter, add search reset button
-- **ProductCard.tsx**: Remove star ratings, fix `slug` in URL, add availability badge, add category label
-- **JumiaProductCard.tsx**: Remove star ratings, add availability badge
-- **BannerCarousel.tsx**: Remove escrow/payment messaging from banners
-- **HowItWorks.tsx** → rename to **TrustAndSafety.tsx**: Rewrite as Trust & Safety page (verification process, buyer tips, reporting)
-- **HowItWorksSection.tsx**: Rewrite steps for discovery→trust→contact model
-- **EscrowExplainer.tsx**: Already updated, keep as-is (no escrow references remain)
-- **Onboarding.tsx**: Rewrite with marketplace-appropriate messaging (remove escrow, delivery references)
-- **Profile.tsx**: Remove "Shopping Preferences" and "Preferred Delivery State" labels, simplify
-- **FarmerDashboard.tsx**: Remove Total Earnings/Pending Payout cards, remove recharts chart, add availability status management
-- **FarmerOnboarding.tsx**: Remove bank verification step, remove delivery_areas reference, simplify to 2 steps (details + documents)
-- **AddProduct.tsx**: Remove weight_kg field, remove delivery fee helper text, add availability status selector
-- **EditProduct.tsx**: Same cleanup as AddProduct
-- **AdminDashboard.tsx**: Remove analytics link, add reports inbox link
-- **AdminAnalytics.tsx**: Delete entirely (order-based analytics)
-- **AdminProducts.tsx**: Works fine, keep
-- **AdminUsers.tsx**: Works fine, keep
-- **FarmerVerifications.tsx**: Remove `allows_pickup` toggle, otherwise functional
-- **Footer.tsx**: Add Trust & Safety link, remove privacy/terms dead links or keep as placeholder
-- **JumiaHeader.tsx**: Remove "How It Works" link, add "Trust & Safety" link
-- **Layout.tsx**: Keep as-is
-- **ConsumerBottomNav.tsx**: Add Browse link
-- **FarmerBottomNav.tsx**: Add Dashboard link
-- **App.tsx**: Update routes (rename how-it-works to trust-and-safety, remove onboarding if simplified, add farmer profile public page)
-- **LocationSelectionModal.tsx**: Remove "delivery" wording
-- **LocationBanner.tsx**: Remove "delivery" references
-
-### CREATE
-- **FarmerProfile.tsx** (public page): New page at `/farmers/:id` showing farmer details, contact buttons, and their product catalog
-- **AdminReports.tsx**: Simple reports inbox for flagged listings/farmers
-
-### DATABASE
-- Migration to drop unused tables: `orders`, `order_items`, `order_tracking`, `payouts`, `delivery_zones`, `delivery_areas`, `delivery_pricing`, `cart_items`, `reviews`, `consumer_reviews`
-- Remove `total_earnings`, `pending_payout`, `allows_pickup`, `area_id` columns from `farmer_profiles`
-- Remove `weight_kg`, `original_price`, `discount_percentage`, `average_rating`, `review_count` columns from `products`
-- Add `listing_reports` table for the report/flag system
-- Update `farmer_profiles_public` view accordingly
+This is a focused pass on top of the current design — no redesign, just targeted fixes and features across 20 items.
 
 ---
 
-## Implementation Plan
+## Phase 1: Database Schema Changes (Migration)
 
-### Phase 1: Database Cleanup
+**New tables:**
+- `platform_states` — admin-manageable states table with columns: `id`, `value` (slug), `label`, `is_active`, `sort_order`, `created_at`
+- `platform_areas` — admin-manageable areas with columns: `id`, `state_value` (FK to platform_states.value), `name`, `created_at`
+- `admin_notifications` — for tracking new user/farmer signups: `id`, `type` (enum: 'new_user', 'new_farmer'), `user_id`, `metadata` (jsonb), `is_read`, `created_at`
 
-**Migration 1 — Drop logistics/order tables:**
-```sql
-DROP TABLE IF EXISTS order_tracking CASCADE;
-DROP TABLE IF EXISTS order_items CASCADE;
-DROP TABLE IF EXISTS payouts CASCADE;
-DROP TABLE IF EXISTS orders CASCADE;
-DROP TABLE IF EXISTS delivery_pricing CASCADE;
-DROP TABLE IF EXISTS delivery_areas CASCADE;
-DROP TABLE IF EXISTS delivery_zones CASCADE;
-DROP TABLE IF EXISTS cart_items CASCADE;
-DROP TABLE IF EXISTS consumer_reviews CASCADE;
-DROP TABLE IF EXISTS reviews CASCADE;
+**Seed data:** Insert current hardcoded states (abuja, kaduna, bauchi, kano) and areas from `nigerianAreas.ts` into the new tables.
+
+**Triggers:**
+- On `profiles` INSERT → insert `admin_notifications` row (type='new_user')
+- On `farmer_profiles` INSERT → insert `admin_notifications` row (type='new_farmer')
+
+**RLS policies:**
+- `platform_states` / `platform_areas`: SELECT for anon+authenticated; INSERT/UPDATE/DELETE for admin only
+- `admin_notifications`: SELECT/UPDATE for admin only
+
+**Grants:** appropriate SELECT/INSERT/UPDATE/DELETE for anon and authenticated on new tables.
+
+**View update:** Recreate `farmer_profiles_public` to include the `area` column (verify it's already there from previous migration).
+
+**Edge function for user deletion:** Create `delete-user` edge function that uses `supabase.auth.admin.deleteUser()` with service_role key — this is the only way to truly delete a user from auth. The function accepts `user_id`, deletes from auth (which cascades to profiles via FK), and returns success.
+
+---
+
+## Phase 2: Image Cropping (Item 1)
+
+**New dependency:** Install `react-cropper` + `cropperjs` (or use a lighter approach with canvas-based cropping).
+
+**New component:** `src/components/ui/ImageCropper.tsx`
+- Modal/dialog-based cropper
+- Accepts image file, returns cropped blob
+- Aspect ratio configurable (default 4:3 for products)
+- Mobile-friendly with touch support
+- Compress output to <1MB using canvas `toBlob` with quality parameter
+
+**Update:** `AddProduct.tsx` and `EditProduct.tsx` — after file selection, open cropper dialog. On confirm, set cropped file as the product image.
+
+---
+
+## Phase 3: Expanded Unit Options (Item 2)
+
+**Update `src/types/index.ts`:** Add a `UNITS` constant array:
+```typescript
+export const UNITS = [
+  { value: 'kg', label: 'Kilogram (kg)' },
+  { value: 'gram', label: 'Gram (g)' },
+  { value: 'ton', label: 'Ton' },
+  { value: 'bag', label: 'Bag' },
+  { value: 'basket', label: 'Basket' },
+  { value: 'bunch', label: 'Bunch' },
+  { value: 'crate', label: 'Crate' },
+  { value: 'paint_bucket', label: 'Paint Bucket' },
+  { value: 'tuber', label: 'Tuber' },
+  { value: 'piece', label: 'Piece' },
+  { value: 'dozen', label: 'Dozen' },
+  { value: 'tray', label: 'Tray' },
+  { value: 'carton', label: 'Carton' },
+  { value: 'litre', label: 'Litre' },
+  { value: 'bottle', label: 'Bottle' },
+  { value: 'bowl', label: 'Bowl' },
+  { value: 'mudu', label: 'Mudu' },
+  { value: 'derica', label: 'Derica' },
+  { value: 'custom', label: 'Custom Unit' },
+];
 ```
 
-**Migration 2 — Clean farmer_profiles and products:**
-```sql
-ALTER TABLE farmer_profiles DROP COLUMN IF EXISTS total_earnings;
-ALTER TABLE farmer_profiles DROP COLUMN IF EXISTS pending_payout;
-ALTER TABLE farmer_profiles DROP COLUMN IF EXISTS allows_pickup;
-ALTER TABLE farmer_profiles DROP COLUMN IF EXISTS area_id;
+**Update:** `AddProduct.tsx`, `EditProduct.tsx` — use `UNITS` array for the select. When "custom" is selected, show a text input for the custom unit name. Store the custom unit text as the unit value.
 
-ALTER TABLE products DROP COLUMN IF EXISTS weight_kg;
-ALTER TABLE products DROP COLUMN IF EXISTS original_price;
-ALTER TABLE products DROP COLUMN IF EXISTS discount_percentage;
-ALTER TABLE products DROP COLUMN IF EXISTS average_rating;
-ALTER TABLE products DROP COLUMN IF EXISTS review_count;
+**Display:** Product cards, detail pages, farmer dashboard already display `product.unit` dynamically — just ensure custom units display properly.
+
+---
+
+## Phase 4: Admin User Delete Fix (Item 3)
+
+**Root cause:** The current `deleteUser` in `AdminUsers.tsx` only deletes from `profiles`, `user_roles`, and `farmer_profiles` tables — but does NOT delete the user from `auth.users`. Since `handle_new_user` trigger fires on auth signup, the auth user still exists and profile rows get recreated on next login.
+
+**Fix:** Create edge function `supabase/functions/delete-user/index.ts` that:
+1. Validates caller is admin (check JWT for admin role)
+2. Calls `supabase.auth.admin.deleteUser(userId)`
+3. The cascading FK `ON DELETE CASCADE` on profiles/farmer_profiles/user_roles handles cleanup
+
+**Update `AdminUsers.tsx`:** Call the edge function instead of manual table deletes:
+```typescript
+const { error } = await supabase.functions.invoke('delete-user', { body: { user_id: userId } });
 ```
 
-**Migration 3 — Create listing_reports table:**
-```sql
-CREATE TABLE public.listing_reports (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  product_id uuid REFERENCES products(id) ON DELETE CASCADE,
-  farmer_profile_id uuid REFERENCES farmer_profiles(id) ON DELETE CASCADE,
-  reporter_session_id text,
-  reporter_user_id uuid,
-  reason text NOT NULL,
-  details text,
-  status text NOT NULL DEFAULT 'pending',
-  admin_notes text,
-  resolved_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-ALTER TABLE listing_reports ENABLE ROW LEVEL SECURITY;
--- Anyone can insert reports
-CREATE POLICY "Anyone can submit reports" ON listing_reports FOR INSERT WITH CHECK (true);
--- Only admins can view/update reports
-CREATE POLICY "Admins can manage reports" ON listing_reports FOR ALL USING (has_role(auth.uid(), 'admin'));
+---
+
+## Phase 5: Sign-In Error Message (Item 4)
+
+**Update `Auth.tsx`:** The login error handler already maps 'Invalid login credentials' — just improve the message to be more user-friendly: "Incorrect email or password. Please try again." Also handle 'Email not confirmed' case separately.
+
+---
+
+## Phase 6: Admin Manages States & Areas (Items 5, 19)
+
+**New page:** `src/pages/admin/AdminLocations.tsx`
+- Two-panel layout: States list on left, Areas for selected state on right
+- Add state: form with value (slug) and label
+- Remove state: delete button with confirmation
+- Add area: text input under selected state
+- Remove area: delete button
+
+**Add route:** `/admin/locations` in `App.tsx`
+
+**Update consuming code:** Replace hardcoded `STATES` from `types/index.ts` with a hook `useStates()` that fetches from `platform_states` table. Fallback to hardcoded if fetch fails.
+
+**Update `nigerianAreas.ts`:** Replace `AREA_SUGGESTIONS` with a hook `useAreaSuggestions(state)` that queries `platform_areas`.
+
+**Files affected:** `types/index.ts` (keep STATES as fallback), new `src/hooks/useStates.ts`, new `src/hooks/useAreaSuggestions.ts`, `AreaInput.tsx`, `FarmerOnboarding.tsx`, `Products.tsx`, `JumiaHeader.tsx`, `Profile.tsx`, `StateBanner.tsx`, `HeroSection.tsx`, `Index.tsx`, `AdminDashboard.tsx`.
+
+---
+
+## Phase 7: Remove Contact Visibility Toggle (Item 6)
+
+**Update `FarmerOnboarding.tsx`:** Remove the `contactVisibilityConsent` state and the checkbox at line 231-233. Remove it from the validation check at line 237.
+
+Contacts are always public — no toggle needed.
+
+---
+
+## Phase 8: Farmer Contact Fields (Items 7, 14, 15)
+
+**Update `FarmerOnboarding.tsx`:** Add email field in the Contact Information section. Currently has WhatsApp + Secondary Phone. Add a "Call Phone Number" field (rename "Secondary Phone" to "Call Number") and add "Email Address" field.
+
+**Update `farmer_profiles` table:** Add `email` column (text, nullable) via migration.
+
+**Update `farmer_profiles_public` view:** Include `email` column.
+
+**Update `FarmerDashboard.tsx` profile tab:** Show contact fields and allow editing (WhatsApp, Call Number, Email). Add an "Edit Contact Info" section with save functionality.
+
+**Update `FarmerProfile.tsx` and `ProductDetail.tsx`:** Ensure all three contact methods (WhatsApp, Call, Email) are displayed from farmer data.
+
+---
+
+## Phase 9: Phone Number Normalization (Item 9)
+
+**New utility:** `src/lib/phone.ts`
+```typescript
+export const normalizeNigerianPhone = (phone: string): string => {
+  const cleaned = phone.replace(/[^0-9+]/g, '');
+  if (cleaned.startsWith('+234')) return cleaned;
+  if (cleaned.startsWith('234')) return '+' + cleaned;
+  if (cleaned.startsWith('0')) return '+234' + cleaned.slice(1);
+  return '+234' + cleaned;
+};
 ```
 
-**Migration 4 — Update farmer_profiles_public view:**
-Drop and recreate without removed columns.
+**Apply in:**
+- `FarmerOnboarding.tsx` — normalize before saving
+- `FarmerDashboard.tsx` — normalize on edit save
+- `FarmerProfile.tsx` — normalize for WhatsApp/call links
+- `ProductDetail.tsx` — normalize for WhatsApp/call links
 
-**Migration 5 — Drop related functions:**
-```sql
-DROP FUNCTION IF EXISTS check_order_update() CASCADE;
-DROP FUNCTION IF EXISTS update_product_rating() CASCADE;
-DROP FUNCTION IF EXISTS update_consumer_rating() CASCADE;
-DROP FUNCTION IF EXISTS ensure_single_default_address() CASCADE;
+---
+
+## Phase 10: WhatsApp Pre-Written Message (Item 13)
+
+**Update `ProductDetail.tsx`:** The WhatsApp link already has a message but it's generic. Make it product-specific:
+```
+`Hi, I saw your "${product.name}" listing on AgroTrust and I'd like to make an inquiry. Is it still available?`
 ```
 
-### Phase 2: Delete Files
+**Update `FarmerProfile.tsx`:** Keep the generic farm inquiry message as-is (no specific product context there).
 
-Delete these files:
-- `src/components/reviews/*` (4 files)
-- `src/components/admin/OrderTrendsChart.tsx`
-- `src/components/admin/RevenueChart.tsx`
-- `src/components/admin/TopProductsChart.tsx`
-- `src/components/admin/CategoryDistributionChart.tsx`
-- `src/components/admin/FarmerPerformanceTable.tsx`
-- `src/components/home/FlashDeals.tsx`
-- `src/components/home/HeroSection.tsx`
-- `src/components/home/FeaturedProducts.tsx`
-- `src/components/home/TrustStats.tsx`
-- `src/pages/admin/AdminAnalytics.tsx`
-- `src/data/mockData.ts`
-- `supabase/functions/calculate-delivery-fee/`
-- `supabase/functions/confirm-delivery/`
-- `supabase/functions/create-transfer-recipient/`
-- `supabase/functions/paystack-initialize/`
-- `supabase/functions/paystack-verify/`
-- `supabase/functions/paystack-webhook/`
-- `supabase/functions/release-escrow/`
-- `supabase/functions/send-payout-notification/`
-- `supabase/functions/verify-bank-account/`
+---
 
-### Phase 3: Types Cleanup
+## Phase 11: Admin Notifications Page (Item 10)
 
-**`src/types/index.ts`** — Remove `CartItem`, `Order`, `TrackingEvent`, `OrderStatus`, `slug` from Product. Remove `rating`/`reviewCount` from Product. Add availability status type.
+**New page:** `src/pages/admin/AdminNotifications.tsx`
+- List of recent signups (users and farmers)
+- Each item shows: name, email, type (Consumer/Farmer), timestamp
+- Mark as read functionality
+- Filter by type (all/users/farmers)
 
-### Phase 4: Core Page Rewrites
+**Add route:** `/admin/notifications` in `App.tsx`
+**Update `AdminDashboard.tsx`:** Add notifications card/link.
 
-**`Index.tsx`** — Remove FlashDeals. Keep: LocationBanner, LocationSelectionModal, BannerCarousel, TrustBanner, CategoryGrid, BrowseByStateSection, FeaturedProductsSection (renamed to LatestListings), EscrowExplainer (trust section), BecomeFarmerCTA.
+---
 
-**`Products.tsx`** — Remove rating sort option and rating filter. Add verified-only toggle filter. Add availability filter (In Stock / Limited / Out of Stock). Add search clear button. Remove `slug` from URLs.
+## Phase 12: Farmer Verification Review Improvements (Items 11, 12)
 
-**`ProductDetail.tsx`** — Remove ProductReviews import/section. Remove star ratings display. Remove `slug` references. Add link to farmer public profile page. Clean up report section.
+**Update `FarmerVerifications.tsx`:**
+- In the detail dialog, show farmer's state label AND area clearly (line 147 currently shows raw state value — format with `formatLocation`)
+- Fix reject: The `handleUpdateStatus` function looks correct syntactically. The issue is likely RLS — the `check_farmer_profile_update` trigger prevents non-admins from changing verification fields, but the update uses the admin's session. Need to investigate if the `verification_status` enum type includes 'rejected'. Check if the enum `verification_status` has 'rejected' as a valid value. If not, add it via migration.
 
-**`HowItWorks.tsx` → Trust & Safety page** — Rewrite with: How verification works, buyer safety tips, reporting instructions. Remove all escrow/delivery/order FAQs.
+---
 
-**`Onboarding.tsx`** — Remove escrow and delivery messaging. Update copy to marketplace model.
+## Phase 13: Dashboard Bottom Navigation (Item 16)
 
-**`Profile.tsx`** — Change "Shopping Preferences" to "Browse Preferences". Change "Preferred Delivery State" to "Preferred State". Remove "Live Chat" support option.
+**Update `Layout.tsx`:** Currently `FarmerDashboard.tsx` doesn't use `<Layout>` — it has its own header. Two options:
+1. Wrap farmer dashboard pages in Layout (adds bottom nav automatically)
+2. Add FarmerBottomNav directly to FarmerDashboard, AddProduct, EditProduct
 
-### Phase 5: Farmer Side Fixes
+**Approach:** Add `<FarmerBottomNav />` import and render to `FarmerDashboard.tsx`, `AddProduct.tsx`, and `EditProduct.tsx` at the bottom, plus add `pb-16 lg:pb-0` to the main container.
 
-**`FarmerDashboard.tsx`** — Remove earnings/payout stat cards. Remove recharts import and listing chart. Add product availability quick-update.
+---
 
-**`FarmerOnboarding.tsx`** — Remove bank verification step (step 2). Remove delivery_areas loading. Simplify to: Details → Documents → Review. Keep bank details as optional fields (no verification call).
+## Phase 14: State-Based Discovery (Items 17, 18, 20)
 
-**`AddProduct.tsx`** — Remove weight_kg field and delivery fee text. Remove original_price/discount fields. Add availability status (In Stock/Limited/Out of Stock).
+**Update `Index.tsx`:** Add a new `StateBrowseSection` component between CategoryGrid and FeaturedFarmers. Shows available states as browseable cards linking to `/products/{state}`.
 
-**`EditProduct.tsx`** — Same cleanup. Add availability status selector.
+**New component:** `src/components/home/StateBrowseSection.tsx`
+- Grid of state cards (fetch from `platform_states`)
+- Each card shows state name + product count
+- Links to `/products/{stateValue}`
 
-### Phase 6: Admin Side Fixes
+**Update `CartContext.tsx`:** For logged-in users, check `preferred_state` from profile. If set and matches an available state, use it as default. For logged-out users, default to 'all'.
 
-**`AdminDashboard.tsx`** — Remove analytics link. Add "Reports Inbox" stat card and link.
-
-**Create `AdminReports.tsx`** — Simple page showing listing_reports table. Admin can view details, mark resolved, add notes.
-
-**`FarmerVerifications.tsx`** — Remove `allows_pickup` toggle.
-
-**`App.tsx`** — Remove `/admin/analytics` route. Add `/admin/reports` route. Add `/farmers/:id` route (public farmer profile). Rename `/how-it-works` to `/trust-and-safety`. Remove `/onboarding` if simplified into auth flow, or keep with updated copy.
-
-### Phase 7: New Public Farmer Profile Page
-
-**Create `src/pages/FarmerProfile.tsx`** — Public page at `/farmers/:id`:
-- Farmer name, farm name, verified badge
-- Farm description/story
-- Location (State + address)
-- Contact buttons: WhatsApp, Call, Email
-- Years of experience, farm size
-- Date joined
-- Full product catalog from this farmer
-- Report farmer button
-
-### Phase 8: Component Cleanup
-
-**`ProductCard.tsx`** — Remove star rating. Remove slug from URL. Add availability badge (green/yellow/red). Add category tag.
-
-**`JumiaProductCard.tsx`** — Remove star rating. Add availability badge. Remove discount badge (no more original_price).
-
-**`BannerCarousel.tsx`** — Rewrite banner copy to remove escrow/payment references. Focus on discovery, trust, direct contact.
-
-**`HowItWorksSection.tsx`** — Rewrite 3 steps: Browse Farmers → Verify Trust → Contact Directly.
-
-**`LocationSelectionModal.tsx`** — Change "delivery" to "available near you".
-
-**`LocationBanner.tsx`** — Change "listings" wording (already fine).
-
-**`ConsumerBottomNav.tsx`** — Add Browse (products) link.
-
-**`FarmerBottomNav.tsx`** — Add Dashboard link.
-
-**`JumiaHeader.tsx`** — Change "How It Works" to "Trust & Safety". Update link.
-
-**`Footer.tsx`** — Add Trust & Safety link. Keep structure.
-
-### Phase 9: Edge Function Cleanup
-
-Delete 9 logistics/payment edge functions listed above. Keep: `send-farmer-verification-email`, `send-whatsapp-notification`.
-
-### Phase 10: Final QA Items
-
-- Verify all imports resolve (no broken references to deleted files)
-- Verify all routes work
-- Verify product CRUD works for farmers
-- Verify admin verification queue works
-- Verify report submission works
-- Verify contact buttons (WhatsApp/Call) work
-- Verify no console errors
-- Verify mobile responsive layout
+**Update `useAuth` or create new hook:** On auth state change, fetch user's preferred_state and set in location context.
 
 ---
 
 ## Files Summary
 
-| Action | Count | Details |
-|--------|-------|---------|
-| Delete | ~25 files | Reviews, analytics charts, mock data, edge functions, FlashDeals, HeroSection |
-| Create | 2 files | FarmerProfile.tsx, AdminReports.tsx |
-| Modify | ~20 files | Types, pages, components, routing |
-| DB Migrations | 5 | Drop tables, clean columns, create reports table, update view, drop functions |
+| Action | Files |
+|--------|-------|
+| **DB Migration** | 1 large migration (new tables, triggers, grants, email column, enum check) |
+| **Edge Function** | `supabase/functions/delete-user/index.ts` |
+| **New Components** | `ImageCropper.tsx`, `AdminLocations.tsx`, `AdminNotifications.tsx`, `StateBrowseSection.tsx` |
+| **New Hooks** | `useStates.ts`, `useAreaSuggestions.ts` |
+| **New Utilities** | `src/lib/phone.ts` |
+| **Updated** | `types/index.ts`, `AddProduct.tsx`, `EditProduct.tsx`, `FarmerOnboarding.tsx`, `FarmerDashboard.tsx`, `AdminUsers.tsx`, `FarmerVerifications.tsx`, `Auth.tsx`, `FarmerProfile.tsx`, `ProductDetail.tsx`, `Index.tsx`, `App.tsx`, `CartContext.tsx`, `Layout.tsx`, `AdminDashboard.tsx`, `AreaInput.tsx`, `Products.tsx`, `JumiaHeader.tsx`, `Profile.tsx`, `StateBanner.tsx`, `HeroSection.tsx` |
+
+---
+
+## Implementation Order
+
+1. DB migration + edge function (foundational)
+2. Phone normalization utility + UNITS constant (small, no deps)
+3. Auth error message fix (quick)
+4. Remove contact toggle + add contact fields (quick)
+5. Admin user delete fix (edge function)
+6. Image cropper component + integrate
+7. Expanded units in forms
+8. Admin locations page + hooks to replace hardcoded states
+9. Admin notifications page
+10. Farmer verification review improvements + reject fix
+11. Dashboard bottom nav
+12. State-based discovery on homepage
+13. Default state logic for visitors vs users
+14. WhatsApp pre-written messages
+15. Ensure contacts shown everywhere
 
