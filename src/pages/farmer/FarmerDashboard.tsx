@@ -61,6 +61,8 @@ export default function FarmerDashboard() {
       setWhatsapp(profile.whatsapp_phone || '');
       setCallPhone(profile.secondary_phone || '');
       setFarmerEmail((profile as any).email || '');
+      setEditState(profile.state || '');
+      setEditArea(profile.area || '');
       const { data: productsData } = await supabase.from('products').select('*').eq('farmer_id', profile.id).order('created_at', { ascending: false });
       setProducts(productsData || []);
     } catch (error) {
