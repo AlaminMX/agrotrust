@@ -132,6 +132,32 @@ export default function FarmerDashboard() {
     }
   };
 
+  const saveProfileDetails = async () => {
+    if (!farmerProfile) return;
+    setSavingDetails(true);
+    try {
+      const { error } = await supabase.from('farmer_profiles').update({
+        farm_description: editDescription || null,
+        address: editAddress || null,
+        produce_types: editProduceTypes.length > 0 ? editProduceTypes : null,
+      }).eq('id', farmerProfile.id);
+      if (error) throw error;
+      toast({ title: 'Profile details updated' });
+      setEditingDetails(false);
+      loadFarmerData();
+    } catch (error: any) {
+      toast({ title: 'Failed to update', description: error.message, variant: 'destructive' });
+    } finally {
+      setSavingDetails(false);
+    }
+  };
+
+  const toggleProduceType = (value: string) => {
+    setEditProduceTypes(prev =>
+      prev.includes(value) ? prev.filter(t => t !== value) : [...prev, value]
+    );
+  };
+
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
