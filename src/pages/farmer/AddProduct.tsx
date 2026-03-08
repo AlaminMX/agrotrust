@@ -11,8 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowLeft, CheckCircle2, Leaf, ImageIcon, AlertCircle } from 'lucide-react';
-import { CATEGORIES } from '@/types';
+import { CATEGORIES, UNITS } from '@/types';
 import { AreaInput } from '@/components/ui/AreaInput';
+import { ImageCropper } from '@/components/ui/ImageCropper';
+import { FarmerBottomNav } from '@/components/layout/FarmerBottomNav';
 import { cn } from '@/lib/utils';
 
 export default function AddProduct() {
@@ -27,6 +29,7 @@ export default function AddProduct() {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [unit, setUnit] = useState('kg');
+  const [customUnit, setCustomUnit] = useState('');
   const [category, setCategory] = useState('');
   const [availableQuantity, setAvailableQuantity] = useState('');
   const [productImage, setProductImage] = useState<File | null>(null);
@@ -34,6 +37,10 @@ export default function AddProduct() {
   const [imageError, setImageError] = useState(false);
   const [isNegotiable, setIsNegotiable] = useState(false);
   const [area, setArea] = useState('');
+
+  // Cropper state
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
 
   useEffect(() => { if (!authLoading && !user) navigate('/auth'); }, [user, authLoading, navigate]);
   useEffect(() => { if (user) loadFarmerProfile(); }, [user]);
@@ -49,11 +56,17 @@ export default function AddProduct() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setProductImage(file); setImageError(false);
+      setImageError(false);
       const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.onloadend = () => { setRawImageSrc(reader.result as string); setCropperOpen(true); };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCropComplete = (blob: Blob) => {
+    const file = new File([blob], 'product-image.jpg', { type: 'image/jpeg' });
+    setProductImage(file);
+    setImagePreview(URL.createObjectURL(blob));
   };
 
   const uploadImage = async (file: File) => {
@@ -68,14 +81,16 @@ export default function AddProduct() {
     e.preventDefault();
     if (!productImage) { setImageError(true); toast({ title: 'Image Required', description: 'Please upload a product image.', variant: 'destructive' }); return; }
     if (!farmerProfile) return;
+    const finalUnit = unit === 'custom' ? customUnit : unit;
+    if (!finalUnit) { toast({ title: 'Unit Required', description: 'Please specify the unit.', variant: 'destructive' }); return; }
     setIsSubmitting(true);
     try {
       const imageUrl = await uploadImage(productImage);
       const { error } = await supabase.from('products').insert({
         farmer_id: farmerProfile.id, name, description, price: parseFloat(price),
-        unit, category, available_quantity: parseInt(availableQuantity),
+        unit: finalUnit, category, available_quantity: parseInt(availableQuantity),
         image_url: imageUrl, is_active: true, is_negotiable: isNegotiable,
-        listing_status: 'active', state: farmerProfile.state,
+        listing_status: 'active', state: farmerProfile.state, area: area || farmerProfile.area || null,
       } as any);
       if (error) throw error;
       toast({ title: 'Product Added!', description: 'Your product is now live.' });
@@ -88,7 +103,7 @@ export default function AddProduct() {
   if (authLoading || loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-16 lg:pb-0">
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/farmer/dashboard')}><ArrowLeft className="h-5 w-5" /></Button>
@@ -121,7 +136,14 @@ export default function AddProduct() {
               <div className="space-y-2"><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} /></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Category *</Label><Select value={category} onValueChange={setCategory} required><SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger><SelectContent>{CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.icon} {c.label}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-2"><Label>Unit *</Label><Select value={unit} onValueChange={setUnit}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="kg">Kilogram (kg)</SelectItem><SelectItem value="piece">Piece</SelectItem><SelectItem value="bunch">Bunch</SelectItem><SelectItem value="basket">Basket</SelectItem><SelectItem value="bag">Bag</SelectItem><SelectItem value="crate">Crate</SelectItem></SelectContent></Select></div>
+                <div className="space-y-2">
+                  <Label>Unit *</Label>
+                  <Select value={unit} onValueChange={setUnit}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{UNITS.map(u => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                  {unit === 'custom' && <Input value={customUnit} onChange={e => setCustomUnit(e.target.value)} placeholder="Enter custom unit" className="mt-2" />}
+                </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Price (₦) *</Label><Input type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} required /></div>
@@ -139,6 +161,8 @@ export default function AddProduct() {
           </CardContent>
         </Card>
       </main>
+      {rawImageSrc && <ImageCropper imageSrc={rawImageSrc} open={cropperOpen} onClose={() => setCropperOpen(false)} onCropComplete={handleCropComplete} />}
+      <FarmerBottomNav />
     </div>
   );
 }

@@ -266,25 +266,12 @@ export default function AdminUsers() {
 
   const deleteUser = async (userId: string) => {
     try {
-      // Delete user roles first
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId);
-
-      // Delete farmer profile if exists
-      await supabase
-        .from('farmer_profiles')
-        .delete()
-        .eq('user_id', userId);
-
-      // Delete user profile
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('user_id', userId);
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { user_id: userId },
+      });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       setUsers(users.filter(u => u.user_id !== userId));
 

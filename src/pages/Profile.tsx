@@ -12,7 +12,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { BackButton } from '@/components/ui/BackButton';
 import { toast } from 'sonner';
 import { User, Settings, Phone, Mail, HelpCircle, LogOut } from 'lucide-react';
-import { STATES, CATEGORIES, State, ProductCategory } from '@/types';
+import { CATEGORIES, State, ProductCategory } from '@/types';
+import { useStates } from '@/hooks/useStates';
 import { cn } from '@/lib/utils';
 
 interface Profile {
@@ -26,6 +27,7 @@ interface Profile {
 export default function Profile() {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
+  const { states } = useStates();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -111,7 +113,7 @@ export default function Profile() {
               <CardContent className="space-y-6">
                 <div className="space-y-3">
                   <Label>Preferred State</Label>
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{STATES.filter(s => s.value !== 'all').map((state) => <button key={state.value} onClick={() => setPreferredState(state.value)} className={cn('flex items-center gap-2 p-3 rounded-lg border-2 transition-all text-left', preferredState === state.value ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30')}><span>{state.label}</span></button>)}</div>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{states.map((state) => <button key={state.value} onClick={() => setPreferredState(state.value as State)} className={cn('flex items-center gap-2 p-3 rounded-lg border-2 transition-all text-left', preferredState === state.value ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30')}><span>{state.label}</span></button>)}</div>
                 </div>
                 <div className="space-y-3">
                   <Label>Produce Interests</Label>

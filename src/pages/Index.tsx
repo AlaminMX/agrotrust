@@ -2,6 +2,7 @@ import { Layout } from '@/components/layout/Layout';
 import { HeroSection } from '@/components/home/HeroSection';
 import { TrustBanner } from '@/components/home/TrustBanner';
 import { CategoryGrid } from '@/components/home/CategoryGrid';
+import { StateBrowseSection } from '@/components/home/StateBrowseSection';
 import { FeaturedFarmersSection } from '@/components/home/FeaturedFarmersSection';
 import { FeaturedProductsSection } from '@/components/home/FeaturedProductsSection';
 import { HowItWorksSection } from '@/components/home/HowItWorksSection';
@@ -13,6 +14,7 @@ const Index = () => {
       <HeroSection />
       <TrustBanner />
       <CategoryGrid />
+      <StateBrowseSection />
       <FeaturedFarmersSection />
       <FeaturedProductsSection />
       <HowItWorksSection />

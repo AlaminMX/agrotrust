@@ -3,14 +3,19 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { BackButton } from '@/components/ui/BackButton';
-import { Loader2, Package, Plus, LogOut, Leaf, Home, ChevronDown, MapPin } from 'lucide-react';
+import { Loader2, Package, Plus, LogOut, Leaf, Home, ChevronDown, MapPin, Phone, MessageCircle, Mail, Save } from 'lucide-react';
 import { formatNaira } from '@/lib/format';
 import { formatLocation } from '@/lib/location';
 import { getAvailabilityStatus, getAvailabilityColor } from '@/types';
+import { normalizeNigerianPhone } from '@/lib/phone';
+import { FarmerBottomNav } from '@/components/layout/FarmerBottomNav';
+import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -18,9 +23,17 @@ import {
 export default function FarmerDashboard() {
   const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [farmerProfile, setFarmerProfile] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Contact edit state
+  const [editingContact, setEditingContact] = useState(false);
+  const [whatsapp, setWhatsapp] = useState('');
+  const [callPhone, setCallPhone] = useState('');
+  const [farmerEmail, setFarmerEmail] = useState('');
+  const [savingContact, setSavingContact] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate('/auth');
@@ -35,12 +48,35 @@ export default function FarmerDashboard() {
       const { data: profile } = await supabase.from('farmer_profiles').select('*').eq('user_id', user!.id).maybeSingle();
       if (!profile || profile.verification_status !== 'approved') { navigate('/farmer/onboarding'); return; }
       setFarmerProfile(profile);
+      setWhatsapp(profile.whatsapp_phone || '');
+      setCallPhone(profile.secondary_phone || '');
+      setFarmerEmail((profile as any).email || '');
       const { data: productsData } = await supabase.from('products').select('*').eq('farmer_id', profile.id).order('created_at', { ascending: false });
       setProducts(productsData || []);
     } catch (error) {
       console.error('Error loading farmer data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveContactInfo = async () => {
+    if (!farmerProfile) return;
+    setSavingContact(true);
+    try {
+      const { error } = await supabase.from('farmer_profiles').update({
+        whatsapp_phone: normalizeNigerianPhone(whatsapp) || null,
+        secondary_phone: normalizeNigerianPhone(callPhone) || null,
+        email: farmerEmail || null,
+      } as any).eq('id', farmerProfile.id);
+      if (error) throw error;
+      toast({ title: 'Contact info updated' });
+      setEditingContact(false);
+      loadFarmerData();
+    } catch (error: any) {
+      toast({ title: 'Failed to update', description: error.message, variant: 'destructive' });
+    } finally {
+      setSavingContact(false);
     }
   };
 
@@ -51,7 +87,7 @@ export default function FarmerDashboard() {
   const activeProducts = products.filter(p => p.is_active).length;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-16 lg:pb-0">
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -94,6 +130,7 @@ export default function FarmerDashboard() {
           <TabsList>
             <TabsTrigger value="listings">Listings</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="contact">Contact</TabsTrigger>
           </TabsList>
 
           <TabsContent value="listings" className="space-y-4">
@@ -176,8 +213,60 @@ export default function FarmerDashboard() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="contact" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Phone className="h-5 w-5" /> Contact Information</CardTitle>
+                <CardDescription>Your contact details are shown publicly on your profile and product pages</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {editingContact ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label>WhatsApp Number</Label>
+                      <Input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="08012345678" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Call Number</Label>
+                      <Input value={callPhone} onChange={e => setCallPhone(e.target.value)} placeholder="08012345678" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email Address</Label>
+                      <Input type="email" value={farmerEmail} onChange={e => setFarmerEmail(e.target.value)} placeholder="farmer@example.com" />
+                    </div>
+                    <div className="flex gap-3">
+                      <Button onClick={saveContactInfo} disabled={savingContact}>
+                        <Save className="h-4 w-4 mr-2" />{savingContact ? 'Saving...' : 'Save'}
+                      </Button>
+                      <Button variant="outline" onClick={() => setEditingContact(false)}>Cancel</Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 p-3 rounded-lg border border-border">
+                        <MessageCircle className="h-5 w-5 text-[hsl(var(--whatsapp))]" />
+                        <div><p className="text-xs text-muted-foreground">WhatsApp</p><p className="font-medium">{farmerProfile?.whatsapp_phone || 'Not set'}</p></div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 rounded-lg border border-border">
+                        <Phone className="h-5 w-5 text-primary" />
+                        <div><p className="text-xs text-muted-foreground">Call Number</p><p className="font-medium">{farmerProfile?.secondary_phone || 'Not set'}</p></div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 rounded-lg border border-border">
+                        <Mail className="h-5 w-5 text-primary" />
+                        <div><p className="text-xs text-muted-foreground">Email</p><p className="font-medium">{(farmerProfile as any)?.email || 'Not set'}</p></div>
+                      </div>
+                    </div>
+                    <Button variant="outline" onClick={() => setEditingContact(true)}>Edit Contact Info</Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </main>
+      <FarmerBottomNav />
     </div>
   );
 }

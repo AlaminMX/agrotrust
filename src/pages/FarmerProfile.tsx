@@ -13,13 +13,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { logActivity, getGuestSessionId } from '@/lib/activityLogger';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { getWhatsAppLink, getCallLink } from '@/lib/phone';
 
 interface FarmerData {
   id: string; farm_name: string; farm_description: string | null; state: string; area: string | null;
   address: string | null; farm_size: string | null; produce_types: string[] | null;
   verification_status: string; verified_at: string | null; created_at: string;
-  whatsapp_phone: string | null; secondary_phone: string | null; years_of_experience: number | null;
-  user_id: string;
+  whatsapp_phone: string | null; secondary_phone: string | null; email: string | null;
+  years_of_experience: number | null; user_id: string;
 }
 
 interface ProductData {
@@ -61,7 +62,7 @@ export default function FarmerProfile() {
         if (profile) {
           setFarmerName(profile.full_name || data.farm_name || '');
           setFarmerPhone(profile.phone || '');
-          setFarmerEmail(profile.email || '');
+          setFarmerEmail(data.email || profile.email || '');
         }
       }
 
@@ -93,8 +94,10 @@ export default function FarmerProfile() {
   }
 
   const whatsappNumber = farmer.whatsapp_phone || farmerPhone;
-  const whatsappLink = whatsappNumber ? `https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hi, I found your farm on AgroTrust.`)}` : '';
-  const callNumber = farmerPhone || farmer.secondary_phone || '';
+  const whatsappLink = whatsappNumber ? getWhatsAppLink(whatsappNumber, `Hi, I found your farm "${farmer.farm_name}" on AgroTrust and I'd like to know more.`) : '';
+  const callNumber = farmer.secondary_phone || farmerPhone;
+  const callLink = callNumber ? getCallLink(callNumber) : '';
+  const emailAddr = farmer.email || farmerEmail;
 
   const submitReport = async () => {
     setReporting(true);
@@ -117,7 +120,6 @@ export default function FarmerProfile() {
           <span className="text-sm text-muted-foreground">Back</span>
         </div>
 
-        {/* Farmer Header Card */}
         <div className="bg-card border border-border rounded-2xl p-6 md:p-8 mb-8">
           <div className="flex flex-col md:flex-row gap-5">
             <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -152,7 +154,6 @@ export default function FarmerProfile() {
             </div>
           </div>
 
-          {/* Contact Row */}
           <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-border">
             {whatsappLink && (
               <a href={whatsappLink} target="_blank" rel="noopener noreferrer"
@@ -162,19 +163,18 @@ export default function FarmerProfile() {
                 </Button>
               </a>
             )}
-            {callNumber && (
-              <a href={`tel:${callNumber}`} onClick={() => logActivity('contact_farmer_call', { metadata: { farmerId: farmer.id } })}>
+            {callLink && (
+              <a href={callLink} onClick={() => logActivity('contact_farmer_call', { metadata: { farmerId: farmer.id } })}>
                 <Button variant="outline" className="gap-2"><Phone className="h-5 w-5" /> Call</Button>
               </a>
             )}
-            {farmerEmail && (
-              <a href={`mailto:${farmerEmail}?subject=Enquiry from AgroTrust`}>
+            {emailAddr && (
+              <a href={`mailto:${emailAddr}?subject=Enquiry from AgroTrust`}>
                 <Button variant="outline" className="gap-2"><Mail className="h-5 w-5" /> Email</Button>
               </a>
             )}
           </div>
 
-          {/* Trust reminder */}
           <div className="mt-4 pt-4 border-t border-border">
             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
               <ShieldCheck className="h-3.5 w-3.5 text-primary" />
@@ -183,7 +183,6 @@ export default function FarmerProfile() {
           </div>
         </div>
 
-        {/* Product Catalog */}
         <div className="mb-8">
           <h2 className="text-xl font-bold text-foreground mb-4">Products ({products.length})</h2>
           {products.length === 0 ? (
@@ -217,7 +216,6 @@ export default function FarmerProfile() {
           )}
         </div>
 
-        {/* Report */}
         <div className="border-t border-border pt-4">
           <button onClick={() => setShowReport(!showReport)} className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors">
             <Flag className="h-4 w-4" /> Report this farmer

@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CheckCircle, XCircle, Eye, FileText, MapPin, Calendar, Loader2, Trash2, UserX } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { formatLocation } from '@/lib/location';
 
 export default function FarmerVerifications() {
   const { user, loading: authLoading } = useAuth();
@@ -144,7 +145,7 @@ export default function FarmerVerifications() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div><h3 className="font-semibold mb-2">Farm Details</h3><div className="space-y-2 text-sm">
                     <p><span className="text-muted-foreground">Name:</span> {selectedFarmer.farm_name}</p>
-                    <p className="flex items-center gap-1"><MapPin className="h-4 w-4 text-muted-foreground" /><span className="capitalize">{selectedFarmer.state}</span></p>
+                    <p className="flex items-center gap-1"><MapPin className="h-4 w-4 text-muted-foreground" />{formatLocation(selectedFarmer.state, selectedFarmer.area)}</p>
                     <p><span className="text-muted-foreground">Size:</span> {selectedFarmer.farm_size || 'N/A'}</p>
                     <p><span className="text-muted-foreground">Address:</span> {selectedFarmer.address || 'N/A'}</p>
                     {selectedFarmer.whatsapp_phone && <p><span className="text-muted-foreground">WhatsApp:</span> {selectedFarmer.whatsapp_phone}</p>}

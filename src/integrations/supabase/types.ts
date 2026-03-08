@@ -14,12 +14,40 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          metadata: Json | null
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          metadata?: Json | null
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          metadata?: Json | null
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       farmer_profiles: {
         Row: {
           address: string | null
           area: string | null
           certification_urls: string[] | null
           created_at: string
+          email: string | null
           farm_description: string | null
           farm_name: string
           farm_registration_url: string | null
@@ -42,6 +70,7 @@ export type Database = {
           area?: string | null
           certification_urls?: string[] | null
           created_at?: string
+          email?: string | null
           farm_description?: string | null
           farm_name: string
           farm_registration_url?: string | null
@@ -64,6 +93,7 @@ export type Database = {
           area?: string | null
           certification_urls?: string[] | null
           created_at?: string
+          email?: string | null
           farm_description?: string | null
           farm_name?: string
           farm_registration_url?: string | null
@@ -146,6 +176,62 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_areas: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          state_value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          state_value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          state_value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_areas_state_value_fkey"
+            columns: ["state_value"]
+            isOneToOne: false
+            referencedRelation: "platform_states"
+            referencedColumns: ["value"]
+          },
+        ]
+      }
+      platform_states: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
       }
       products: {
         Row: {
@@ -287,7 +373,9 @@ export type Database = {
       farmer_profiles_public: {
         Row: {
           address: string | null
+          area: string | null
           created_at: string | null
+          email: string | null
           farm_description: string | null
           farm_name: string | null
           farm_size: string | null
@@ -306,7 +394,9 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          area?: string | null
           created_at?: string | null
+          email?: string | null
           farm_description?: string | null
           farm_name?: string | null
           farm_size?: string | null
@@ -325,7 +415,9 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          area?: string | null
           created_at?: string | null
+          email?: string | null
           farm_description?: string | null
           farm_name?: string | null
           farm_size?: string | null
@@ -353,6 +445,7 @@ export type Database = {
           address: string
           area: string
           created_at: string
+          email: string
           farm_description: string
           farm_name: string
           farm_size: string

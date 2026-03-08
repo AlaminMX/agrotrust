@@ -28,6 +28,13 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const getLoginErrorMessage = (errorMessage: string): string => {
+    if (errorMessage === 'Invalid login credentials') return 'Incorrect email or password. Please try again.';
+    if (errorMessage.includes('Email not confirmed')) return 'Please verify your email address before signing in. Check your inbox for a confirmation link.';
+    if (errorMessage.includes('Too many requests')) return 'Too many login attempts. Please wait a moment and try again.';
+    return 'Something went wrong. Please try again.';
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try { emailSchema.parse(loginEmail); passwordSchema.parse(loginPassword); } catch (err) {
@@ -36,7 +43,7 @@ export default function Auth() {
     setIsLoading(true);
     const { error } = await signIn(loginEmail, loginPassword);
     setIsLoading(false);
-    if (error) { toast({ title: 'Login Failed', description: error.message === 'Invalid login credentials' ? 'Invalid email or password.' : error.message, variant: 'destructive' }); }
+    if (error) { toast({ title: 'Login Failed', description: getLoginErrorMessage(error.message), variant: 'destructive' }); }
     else { if (rememberMe) localStorage.setItem('agrotrust_remember_me', 'true'); toast({ title: 'Welcome back!' }); navigate('/'); }
   };
 

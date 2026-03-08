@@ -28,7 +28,7 @@ export interface Farmer {
   productsCount: number;
 }
 
-export type State = 'all' | 'abuja' | 'kaduna' | 'bauchi' | 'kano';
+export type State = 'all' | 'abuja' | 'kaduna' | 'bauchi' | 'kano' | (string & {});
 
 export type AvailabilityStatus = 'In Stock' | 'Limited' | 'Out of Stock';
 
@@ -60,6 +60,33 @@ export const CATEGORIES: { value: ProductCategory; label: string; icon: string }
   { value: 'herbs', label: 'Herbs', icon: '🌿' },
   { value: 'meat', label: 'Meat', icon: '🥩' },
 ];
+
+export const UNITS = [
+  { value: 'kg', label: 'Kilogram (kg)' },
+  { value: 'gram', label: 'Gram (g)' },
+  { value: 'ton', label: 'Ton' },
+  { value: 'bag', label: 'Bag' },
+  { value: 'basket', label: 'Basket' },
+  { value: 'bunch', label: 'Bunch' },
+  { value: 'crate', label: 'Crate' },
+  { value: 'paint_bucket', label: 'Paint Bucket' },
+  { value: 'tuber', label: 'Tuber' },
+  { value: 'piece', label: 'Piece' },
+  { value: 'dozen', label: 'Dozen' },
+  { value: 'tray', label: 'Tray' },
+  { value: 'carton', label: 'Carton' },
+  { value: 'litre', label: 'Litre' },
+  { value: 'bottle', label: 'Bottle' },
+  { value: 'bowl', label: 'Bowl' },
+  { value: 'mudu', label: 'Mudu' },
+  { value: 'derica', label: 'Derica' },
+  { value: 'custom', label: 'Custom Unit' },
+];
+
+export const getUnitLabel = (unit: string): string => {
+  const found = UNITS.find(u => u.value === unit);
+  return found ? found.label : unit;
+};
 
 export const getAvailabilityStatus = (quantity: number): AvailabilityStatus => {
   if (quantity <= 0) return 'Out of Stock';
