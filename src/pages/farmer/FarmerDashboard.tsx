@@ -9,7 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { BackButton } from '@/components/ui/BackButton';
-import { Loader2, Package, Plus, LogOut, Leaf, Home, ChevronDown, MapPin, Phone, MessageCircle, Mail, Save, Edit } from 'lucide-react';
+import { Loader2, Package, Plus, LogOut, Leaf, Home, ChevronDown, MapPin, Phone, MessageCircle, Mail, Save, Edit, X } from 'lucide-react';
+import { CATEGORIES } from '@/types';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { formatNaira } from '@/lib/format';
 import { formatLocation } from '@/lib/location';
 import { getAvailabilityStatus, getAvailabilityColor } from '@/types';
@@ -45,6 +48,13 @@ export default function FarmerDashboard() {
   const [savingLocation, setSavingLocation] = useState(false);
   const { states } = useStates();
 
+  // Profile details edit state
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [editDescription, setEditDescription] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editProduceTypes, setEditProduceTypes] = useState<string[]>([]);
+  const [savingDetails, setSavingDetails] = useState(false);
+
   useEffect(() => {
     if (!authLoading && !user) navigate('/auth');
   }, [user, authLoading, navigate]);
@@ -63,6 +73,9 @@ export default function FarmerDashboard() {
       setFarmerEmail((profile as any).email || '');
       setEditState(profile.state || '');
       setEditArea(profile.area || '');
+      setEditDescription(profile.farm_description || '');
+      setEditAddress(profile.address || '');
+      setEditProduceTypes(profile.produce_types || []);
       const { data: productsData } = await supabase.from('products').select('*').eq('farmer_id', profile.id).order('created_at', { ascending: false });
       setProducts(productsData || []);
     } catch (error) {
@@ -117,6 +130,32 @@ export default function FarmerDashboard() {
     } finally {
       setSavingLocation(false);
     }
+  };
+
+  const saveProfileDetails = async () => {
+    if (!farmerProfile) return;
+    setSavingDetails(true);
+    try {
+      const { error } = await supabase.from('farmer_profiles').update({
+        farm_description: editDescription || null,
+        address: editAddress || null,
+        produce_types: editProduceTypes.length > 0 ? editProduceTypes : null,
+      }).eq('id', farmerProfile.id);
+      if (error) throw error;
+      toast({ title: 'Profile details updated' });
+      setEditingDetails(false);
+      loadFarmerData();
+    } catch (error: any) {
+      toast({ title: 'Failed to update', description: error.message, variant: 'destructive' });
+    } finally {
+      setSavingDetails(false);
+    }
+  };
+
+  const toggleProduceType = (value: string) => {
+    setEditProduceTypes(prev =>
+      prev.includes(value) ? prev.filter(t => t !== value) : [...prev, value]
+    );
   };
 
   if (authLoading || loading) {
@@ -271,26 +310,75 @@ export default function FarmerDashboard() {
                   )}
                 </div>
 
-                {farmerProfile?.farm_description && (
-                  <div>
-                    <p className="text-sm font-medium mb-1">About</p>
-                    <p className="text-muted-foreground text-sm">{farmerProfile.farm_description}</p>
+                {/* About, Address, Produce Types - editable */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium">Farm Details</p>
+                    {!editingDetails && (
+                      <Button variant="ghost" size="sm" onClick={() => setEditingDetails(true)}>
+                        <Edit className="h-3.5 w-3.5 mr-1" /> Edit
+                      </Button>
+                    )}
                   </div>
-                )}
-                {farmerProfile?.address && (
-                  <div>
-                    <p className="text-sm font-medium mb-1">Address</p>
-                    <p className="text-muted-foreground text-sm">{farmerProfile.address}</p>
-                  </div>
-                )}
-                {farmerProfile?.produce_types?.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium mb-1">Produce Types</p>
-                    <div className="flex flex-wrap gap-2">
-                      {farmerProfile.produce_types.map((type: string) => <Badge key={type} variant="secondary" className="text-xs">{type}</Badge>)}
+                  {editingDetails ? (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>About / Farm Description</Label>
+                        <Textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} placeholder="Describe your farm..." rows={3} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Address</Label>
+                        <Input value={editAddress} onChange={e => setEditAddress(e.target.value)} placeholder="Farm address" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Produce Types</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {CATEGORIES.map((cat) => (
+                            <label key={cat.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                              <Checkbox
+                                checked={editProduceTypes.includes(cat.value)}
+                                onCheckedChange={() => toggleProduceType(cat.value)}
+                              />
+                              <span>{cat.icon} {cat.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <Button onClick={saveProfileDetails} disabled={savingDetails} size="sm">
+                          <Save className="h-4 w-4 mr-2" />{savingDetails ? 'Saving...' : 'Save Details'}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => {
+                          setEditingDetails(false);
+                          setEditDescription(farmerProfile?.farm_description || '');
+                          setEditAddress(farmerProfile?.address || '');
+                          setEditProduceTypes(farmerProfile?.produce_types || []);
+                        }}>Cancel</Button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">About</p>
+                        <p className="text-sm">{farmerProfile?.farm_description || <span className="text-muted-foreground italic">Not set</span>}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Address</p>
+                        <p className="text-sm">{farmerProfile?.address || <span className="text-muted-foreground italic">Not set</span>}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Produce Types</p>
+                        {farmerProfile?.produce_types?.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {farmerProfile.produce_types.map((type: string) => <Badge key={type} variant="secondary" className="text-xs">{type}</Badge>)}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground italic">Not set</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
