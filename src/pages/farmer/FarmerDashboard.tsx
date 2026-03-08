@@ -229,6 +229,48 @@ export default function FarmerDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Location editing */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium">Location</p>
+                    {!editingLocation && (
+                      <Button variant="ghost" size="sm" onClick={() => setEditingLocation(true)}>
+                        <Edit className="h-3.5 w-3.5 mr-1" /> Edit
+                      </Button>
+                    )}
+                  </div>
+                  {editingLocation ? (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label>State <span className="text-destructive">*</span></Label>
+                        <Select value={editState} onValueChange={(val) => { setEditState(val); setEditArea(''); }}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select state" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {states.map((s) => (
+                              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Area</Label>
+                        <AreaInput value={editArea} onChange={setEditArea} state={editState} placeholder="e.g., Gwarimpa" />
+                      </div>
+                      <div className="flex gap-3">
+                        <Button onClick={saveLocationInfo} disabled={savingLocation || !editState} size="sm">
+                          <Save className="h-4 w-4 mr-2" />{savingLocation ? 'Saving...' : 'Save Location'}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => { setEditingLocation(false); setEditState(farmerProfile?.state || ''); setEditArea(farmerProfile?.area || ''); }}>Cancel</Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Changing your location will also update all your existing product listings.</p>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">{formatLocation(farmerProfile?.state, farmerProfile?.area)}</p>
+                  )}
+                </div>
+
                 {farmerProfile?.farm_description && (
                   <div>
                     <p className="text-sm font-medium mb-1">About</p>
