@@ -9,13 +9,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { BackButton } from '@/components/ui/BackButton';
-import { Loader2, Package, Plus, LogOut, Leaf, Home, ChevronDown, MapPin, Phone, MessageCircle, Mail, Save } from 'lucide-react';
+import { Loader2, Package, Plus, LogOut, Leaf, Home, ChevronDown, MapPin, Phone, MessageCircle, Mail, Save, Edit } from 'lucide-react';
 import { formatNaira } from '@/lib/format';
 import { formatLocation } from '@/lib/location';
 import { getAvailabilityStatus, getAvailabilityColor } from '@/types';
 import { normalizeNigerianPhone } from '@/lib/phone';
 import { FarmerBottomNav } from '@/components/layout/FarmerBottomNav';
 import { useToast } from '@/hooks/use-toast';
+import { useStates } from '@/hooks/useStates';
+import { AreaInput } from '@/components/ui/AreaInput';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -35,6 +38,13 @@ export default function FarmerDashboard() {
   const [farmerEmail, setFarmerEmail] = useState('');
   const [savingContact, setSavingContact] = useState(false);
 
+  // Location edit state
+  const [editingLocation, setEditingLocation] = useState(false);
+  const [editState, setEditState] = useState('');
+  const [editArea, setEditArea] = useState('');
+  const [savingLocation, setSavingLocation] = useState(false);
+  const { states } = useStates();
+
   useEffect(() => {
     if (!authLoading && !user) navigate('/auth');
   }, [user, authLoading, navigate]);
@@ -51,6 +61,8 @@ export default function FarmerDashboard() {
       setWhatsapp(profile.whatsapp_phone || '');
       setCallPhone(profile.secondary_phone || '');
       setFarmerEmail((profile as any).email || '');
+      setEditState(profile.state || '');
+      setEditArea(profile.area || '');
       const { data: productsData } = await supabase.from('products').select('*').eq('farmer_id', profile.id).order('created_at', { ascending: false });
       setProducts(productsData || []);
     } catch (error) {
@@ -77,6 +89,33 @@ export default function FarmerDashboard() {
       toast({ title: 'Failed to update', description: error.message, variant: 'destructive' });
     } finally {
       setSavingContact(false);
+    }
+  };
+
+  const saveLocationInfo = async () => {
+    if (!farmerProfile || !editState) {
+      toast({ title: 'State is required', variant: 'destructive' });
+      return;
+    }
+    setSavingLocation(true);
+    try {
+      const { error } = await supabase.from('farmer_profiles').update({
+        state: editState,
+        area: editArea || null,
+      }).eq('id', farmerProfile.id);
+      if (error) throw error;
+      // Also update all farmer's products to match new location
+      await supabase.from('products').update({
+        state: editState,
+        area: editArea || null,
+      }).eq('farmer_id', farmerProfile.id);
+      toast({ title: 'Location updated' });
+      setEditingLocation(false);
+      loadFarmerData();
+    } catch (error: any) {
+      toast({ title: 'Failed to update location', description: error.message, variant: 'destructive' });
+    } finally {
+      setSavingLocation(false);
     }
   };
 
@@ -190,6 +229,48 @@ export default function FarmerDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Location editing */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium">Location</p>
+                    {!editingLocation && (
+                      <Button variant="ghost" size="sm" onClick={() => setEditingLocation(true)}>
+                        <Edit className="h-3.5 w-3.5 mr-1" /> Edit
+                      </Button>
+                    )}
+                  </div>
+                  {editingLocation ? (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label>State <span className="text-destructive">*</span></Label>
+                        <Select value={editState} onValueChange={(val) => { setEditState(val); setEditArea(''); }}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select state" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {states.map((s) => (
+                              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Area</Label>
+                        <AreaInput value={editArea} onChange={setEditArea} state={editState} placeholder="e.g., Gwarimpa" />
+                      </div>
+                      <div className="flex gap-3">
+                        <Button onClick={saveLocationInfo} disabled={savingLocation || !editState} size="sm">
+                          <Save className="h-4 w-4 mr-2" />{savingLocation ? 'Saving...' : 'Save Location'}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => { setEditingLocation(false); setEditState(farmerProfile?.state || ''); setEditArea(farmerProfile?.area || ''); }}>Cancel</Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Changing your location will also update all your existing product listings.</p>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">{formatLocation(farmerProfile?.state, farmerProfile?.area)}</p>
+                  )}
+                </div>
+
                 {farmerProfile?.farm_description && (
                   <div>
                     <p className="text-sm font-medium mb-1">About</p>
