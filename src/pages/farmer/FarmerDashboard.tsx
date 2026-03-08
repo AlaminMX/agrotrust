@@ -9,13 +9,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { BackButton } from '@/components/ui/BackButton';
-import { Loader2, Package, Plus, LogOut, Leaf, Home, ChevronDown, MapPin, Phone, MessageCircle, Mail, Save } from 'lucide-react';
+import { Loader2, Package, Plus, LogOut, Leaf, Home, ChevronDown, MapPin, Phone, MessageCircle, Mail, Save, Edit } from 'lucide-react';
 import { formatNaira } from '@/lib/format';
 import { formatLocation } from '@/lib/location';
 import { getAvailabilityStatus, getAvailabilityColor } from '@/types';
 import { normalizeNigerianPhone } from '@/lib/phone';
 import { FarmerBottomNav } from '@/components/layout/FarmerBottomNav';
 import { useToast } from '@/hooks/use-toast';
+import { useStates } from '@/hooks/useStates';
+import { AreaInput } from '@/components/ui/AreaInput';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
