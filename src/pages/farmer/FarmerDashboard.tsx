@@ -73,6 +73,9 @@ export default function FarmerDashboard() {
       setFarmerEmail((profile as any).email || '');
       setEditState(profile.state || '');
       setEditArea(profile.area || '');
+      setEditDescription(profile.farm_description || '');
+      setEditAddress(profile.address || '');
+      setEditProduceTypes(profile.produce_types || []);
       const { data: productsData } = await supabase.from('products').select('*').eq('farmer_id', profile.id).order('created_at', { ascending: false });
       setProducts(productsData || []);
     } catch (error) {
