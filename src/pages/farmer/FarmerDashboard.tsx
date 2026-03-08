@@ -38,6 +38,13 @@ export default function FarmerDashboard() {
   const [farmerEmail, setFarmerEmail] = useState('');
   const [savingContact, setSavingContact] = useState(false);
 
+  // Location edit state
+  const [editingLocation, setEditingLocation] = useState(false);
+  const [editState, setEditState] = useState('');
+  const [editArea, setEditArea] = useState('');
+  const [savingLocation, setSavingLocation] = useState(false);
+  const { states } = useStates();
+
   useEffect(() => {
     if (!authLoading && !user) navigate('/auth');
   }, [user, authLoading, navigate]);
