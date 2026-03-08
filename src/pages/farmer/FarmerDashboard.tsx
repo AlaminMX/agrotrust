@@ -9,7 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { BackButton } from '@/components/ui/BackButton';
-import { Loader2, Package, Plus, LogOut, Leaf, Home, ChevronDown, MapPin, Phone, MessageCircle, Mail, Save, Edit } from 'lucide-react';
+import { Loader2, Package, Plus, LogOut, Leaf, Home, ChevronDown, MapPin, Phone, MessageCircle, Mail, Save, Edit, X } from 'lucide-react';
+import { CATEGORIES } from '@/types';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { formatNaira } from '@/lib/format';
 import { formatLocation } from '@/lib/location';
 import { getAvailabilityStatus, getAvailabilityColor } from '@/types';
