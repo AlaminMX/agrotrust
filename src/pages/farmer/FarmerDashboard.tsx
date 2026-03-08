@@ -48,6 +48,13 @@ export default function FarmerDashboard() {
   const [savingLocation, setSavingLocation] = useState(false);
   const { states } = useStates();
 
+  // Profile details edit state
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [editDescription, setEditDescription] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editProduceTypes, setEditProduceTypes] = useState<string[]>([]);
+  const [savingDetails, setSavingDetails] = useState(false);
+
   useEffect(() => {
     if (!authLoading && !user) navigate('/auth');
   }, [user, authLoading, navigate]);
