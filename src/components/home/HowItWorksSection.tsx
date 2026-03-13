@@ -1,4 +1,4 @@
-import { Search, CreditCard, Package, CheckCircle } from 'lucide-react';
+import { Search, Filter, Phone, ShieldCheck } from 'lucide-react';
 
 const steps = [
   {
@@ -7,19 +7,19 @@ const steps = [
     description: 'Explore fresh produce from verified farmers in your state. Every farmer is vetted and approved.',
   },
   {
-    icon: CreditCard,
-    title: 'Pay Securely',
-    description: 'Your payment is held in escrow. Funds are protected until you receive and confirm your order.',
+    icon: Filter,
+    title: 'Filter by State & Category',
+    description: 'Narrow results to the produce and location you want, including verified farmers only.'
   },
   {
-    icon: Package,
-    title: 'We Deliver',
-    description: 'Our platform handles logistics. Track your order from farm to your doorstep in real-time.',
+    icon: Phone,
+    title: 'Contact the Farmer',
+    description: 'Open WhatsApp, call, or email the farmer directly to negotiate and arrange fulfillment.'
   },
   {
-    icon: CheckCircle,
-    title: 'Confirm & Release',
-    description: 'Inspect your produce. Once you confirm delivery, payment is released to the farmer.',
+    icon: ShieldCheck,
+    title: 'Stay Safe',
+    description: 'Use verified profiles and report suspicious listings so admins can review quickly.'
   },
 ];
 
@@ -32,7 +32,7 @@ export const HowItWorksSection = () => {
             How AgroTrust Works
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            A simple, secure process that protects both you and the farmer
+            A simple directory flow for discovery, trust, and direct farmer contact
           </p>
         </div>
 
