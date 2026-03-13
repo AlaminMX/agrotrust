@@ -8,16 +8,18 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowLeft, Upload, CheckCircle2, Leaf, ImageIcon, AlertCircle } from 'lucide-react';
 import { CATEGORIES } from '@/types';
 import { cn } from '@/lib/utils';
+import { compressImage } from '@/lib/imageCompression';
 
 export default function AddProduct() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [farmerProfile, setFarmerProfile] = useState<any>(null);
+  const [farmerProfile, setFarmerProfile] = useState<{ id: string; state: string; verification_status?: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   
@@ -25,14 +27,15 @@ export default function AddProduct() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
-  const [originalPrice, setOriginalPrice] = useState('');
   const [unit, setUnit] = useState('kg');
   const [category, setCategory] = useState('');
   const [availableQuantity, setAvailableQuantity] = useState('');
-  const [weightKg, setWeightKg] = useState('1');
   const [productImage, setProductImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
+  const [isNegotiable, setIsNegotiable] = useState(false);
+  const [listingStatus, setListingStatus] = useState('published');
+  const [availabilityStatus, setAvailabilityStatus] = useState<'In Stock' | 'Limited' | 'Out of Stock'>('In Stock');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -62,10 +65,11 @@ export default function AddProduct() {
     setLoading(false);
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setProductImage(file);
+      const compressed = await compressImage(file);
+      setProductImage(compressed);
       setImageError(false);
       // Create preview
       const reader = new FileReader();
@@ -115,10 +119,6 @@ export default function AddProduct() {
       const imageUrl = await uploadImage(productImage);
       
       const salePrice = parseFloat(price);
-      const origPrice = originalPrice ? parseFloat(originalPrice) : null;
-      const discountPct = origPrice && origPrice > salePrice 
-        ? Math.round(((origPrice - salePrice) / origPrice) * 100) 
-        : 0;
 
       const { error } = await supabase
         .from('products')
@@ -127,14 +127,14 @@ export default function AddProduct() {
           name,
           description,
           price: salePrice,
-          original_price: origPrice,
-          discount_percentage: discountPct,
           unit,
           category,
           available_quantity: parseInt(availableQuantity),
-          weight_kg: parseFloat(weightKg) || 1,
+          availability_status: availabilityStatus,
           image_url: imageUrl,
-          is_active: true,
+          is_active: listingStatus === 'published',
+          is_negotiable: isNegotiable,
+          listing_status: listingStatus,
           state: farmerProfile.state,
         });
       
@@ -147,10 +147,10 @@ export default function AddProduct() {
       
       navigate('/farmer/dashboard');
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Failed to add product',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     } finally {
@@ -266,6 +266,17 @@ export default function AddProduct() {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="state">Listing State *</Label>
+                  <Input
+                    id="state"
+                    value={farmerProfile?.state || ''}
+                    readOnly
+                    className="bg-muted"
+                  />
+                  <p className="text-xs text-muted-foreground">State is locked to your verified farmer profile.</p>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="category">Category *</Label>
                   <Select value={category} onValueChange={setCategory} required>
                     <SelectTrigger>
@@ -296,6 +307,43 @@ export default function AddProduct() {
                       <SelectItem value="crate">Crate</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="listingStatus">Listing Status</Label>
+                  <Select value={listingStatus} onValueChange={setListingStatus}>
+                    <SelectTrigger id="listingStatus">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="published">Published</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="paused">Paused</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+
+                <div className="space-y-2">
+                  <Label htmlFor="availabilityStatus">Availability</Label>
+                  <Select value={availabilityStatus} onValueChange={(v: 'In Stock' | 'Limited' | 'Out of Stock') => setAvailabilityStatus(v)}>
+                    <SelectTrigger id="availabilityStatus"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="In Stock">In Stock</SelectItem>
+                      <SelectItem value="Limited">Limited</SelectItem>
+                      <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div>
+                    <Label htmlFor="isNegotiable" className="font-medium">Price Negotiable</Label>
+                    <p className="text-xs text-muted-foreground">Allow buyers to request price negotiation</p>
+                  </div>
+                  <Switch id="isNegotiable" checked={isNegotiable} onCheckedChange={setIsNegotiable} />
                 </div>
               </div>
               
