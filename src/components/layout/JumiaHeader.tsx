@@ -54,18 +54,18 @@ export const JumiaHeader = () => {
     <header className="sticky top-0 z-50 w-full bg-card border-b border-border">
       {/* Top bar */}
       <div className="bg-primary text-primary-foreground">
-        <div className="container flex h-9 items-center justify-between text-xs">
+        <div className="container flex h-8 md:h-9 items-center justify-between text-[10px] md:text-xs">
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-1 hover:opacity-80 transition-opacity">
               📍 {allStates.find(s => s.value === selectedState)?.label || 'All Nigeria'}
               <ChevronDown className="h-3 w-3" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="bg-card">
+            <DropdownMenuContent align="start" className="bg-card max-h-60 overflow-y-auto">
               {allStates.map(state => (
                 <DropdownMenuItem
                   key={state.value}
                   onClick={() => setSelectedState(state.value as typeof selectedState)}
-                  className={cn(selectedState === state.value && "bg-primary/10 font-medium")}
+                  className={cn("text-xs", selectedState === state.value && "bg-primary/10 font-medium")}
                 >
                   {state.label}
                 </DropdownMenuItem>
@@ -84,17 +84,17 @@ export const JumiaHeader = () => {
       </div>
 
       {/* Main bar */}
-      <div className="container py-3">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+      <div className="container py-2 md:py-3">
+        <div className="flex items-center gap-2 md:gap-3">
+          <Button variant="ghost" size="icon" className="lg:hidden shrink-0 h-8 w-8 md:h-9 md:w-9" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+            {isMenuOpen ? <X className="h-4 w-4 md:h-5 md:w-5" /> : <Menu className="h-4 w-4 md:h-5 md:w-5" />}
           </Button>
           
-          <Link to="/" className="flex items-center gap-2 shrink-0">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <Leaf className="h-5 w-5 text-primary-foreground" />
+          <Link to="/" className="flex items-center gap-1.5 md:gap-2 shrink-0">
+            <div className="flex h-7 w-7 md:h-9 md:w-9 items-center justify-center rounded-lg bg-primary">
+              <Leaf className="h-4 w-4 md:h-5 md:w-5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold text-foreground hidden sm:block">AgroTrust</span>
+            <span className="text-base md:text-lg font-bold text-foreground hidden sm:block">AgroTrust</span>
           </Link>
           
           <form onSubmit={handleSearch} className="flex-1 max-w-xl hidden md:block">
@@ -104,19 +104,19 @@ export const JumiaHeader = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search produce, farmers, areas..."
-                className="w-full h-10 pl-4 pr-12 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+                className="w-full h-9 md:h-10 pl-4 pr-12 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
               />
-              <button type="submit" className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center bg-primary text-primary-foreground rounded-r-lg hover:bg-primary/90 transition-colors">
+              <button type="submit" className="absolute right-0 top-0 h-9 md:h-10 w-9 md:w-10 flex items-center justify-center bg-primary text-primary-foreground rounded-r-lg hover:bg-primary/90 transition-colors">
                 <Search className="h-4 w-4" />
               </button>
             </div>
           </form>
           
-          <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={() => setIsSearchOpen(!isSearchOpen)}>
-            <Search className="h-5 w-5" />
+          <Button variant="ghost" size="icon" className="md:hidden shrink-0 h-8 w-8" onClick={() => setIsSearchOpen(!isSearchOpen)}>
+            <Search className="h-4 w-4" />
           </Button>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2">
             {isFarmer && (
               <Link to="/farmer/products/add" className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
                 <Plus className="h-4 w-4" /> Add Listing
@@ -125,11 +125,8 @@ export const JumiaHeader = () => {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="hidden sm:flex items-center gap-2 h-10">
-                    <User className="h-5 w-5" />
-                    <div className="text-left hidden md:block">
-                      <p className="text-xs text-muted-foreground">Account</p>
-                    </div>
+                  <Button variant="ghost" className="hidden sm:flex items-center gap-1.5 h-8 md:h-10 px-2 md:px-3">
+                    <User className="h-4 w-4 md:h-5 md:w-5" />
                     <ChevronDown className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -161,9 +158,9 @@ export const JumiaHeader = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="ghost" className="hidden sm:flex items-center gap-2 h-10" asChild>
+              <Button variant="ghost" className="hidden sm:flex items-center gap-1.5 h-8 md:h-10 px-2 md:px-3" asChild>
                 <Link to="/auth">
-                  <User className="h-5 w-5" />
+                  <User className="h-4 w-4 md:h-5 md:w-5" />
                   <span className="hidden md:inline text-sm">Sign In</span>
                 </Link>
               </Button>
@@ -191,7 +188,7 @@ export const JumiaHeader = () => {
 
       {/* Mobile search */}
       {isSearchOpen && (
-        <div className="md:hidden border-t border-border bg-card p-3">
+        <div className="md:hidden border-t border-border bg-card p-2.5">
           <form onSubmit={handleSearch} className="relative flex">
             <input
               type="text"
@@ -199,9 +196,9 @@ export const JumiaHeader = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search produce, farmers..."
               autoFocus
-              className="w-full h-10 pl-4 pr-12 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+              className="w-full h-9 pl-4 pr-12 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
             />
-            <button type="submit" className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center bg-primary text-primary-foreground rounded-r-lg">
+            <button type="submit" className="absolute right-0 top-0 h-9 w-9 flex items-center justify-center bg-primary text-primary-foreground rounded-r-lg">
               <Search className="h-4 w-4" />
             </button>
           </form>
@@ -211,17 +208,17 @@ export const JumiaHeader = () => {
       {/* Mobile menu */}
       {isMenuOpen && (
         <div className="lg:hidden border-t border-border bg-card">
-          <nav className="container py-4 space-y-4">
+          <nav className="container py-3 space-y-3">
             {user && (
               <div className="space-y-2">
                 <div className="flex gap-2">
-                  {isAdmin && <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="flex-1"><Button variant="outline" className="w-full text-sm">Admin</Button></Link>}
-                  {isFarmer && <Link to="/farmer/dashboard" onClick={() => setIsMenuOpen(false)} className="flex-1"><Button variant="outline" className="w-full text-sm">Dashboard</Button></Link>}
-                  {!isAdmin && !isFarmer && <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="flex-1"><Button variant="outline" className="w-full text-sm"><User className="h-4 w-4 mr-2" />Profile</Button></Link>}
+                  {isAdmin && <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="flex-1"><Button variant="outline" className="w-full text-xs h-8">Admin</Button></Link>}
+                  {isFarmer && <Link to="/farmer/dashboard" onClick={() => setIsMenuOpen(false)} className="flex-1"><Button variant="outline" className="w-full text-xs h-8">Dashboard</Button></Link>}
+                  {!isAdmin && !isFarmer && <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="flex-1"><Button variant="outline" className="w-full text-xs h-8"><User className="h-3.5 w-3.5 mr-1.5" />Profile</Button></Link>}
                 </div>
                 {isFarmer && (
                   <Link to="/farmer/products/add" onClick={() => setIsMenuOpen(false)}>
-                    <Button className="w-full text-sm"><Plus className="h-4 w-4 mr-2" />Add Listing</Button>
+                    <Button className="w-full text-xs h-8"><Plus className="h-3.5 w-3.5 mr-1.5" />Add Listing</Button>
                   </Link>
                 )}
               </div>
@@ -232,15 +229,23 @@ export const JumiaHeader = () => {
                   key={c.value}
                   to={`/products?category=${c.value}`}
                   onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 text-xs rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
                 >
                   <span>{c.icon}</span>{c.label}
                 </Link>
               ))}
             </div>
+            {/* Become a Farmer link in mobile menu */}
+            {!isFarmer && !isAdmin && (
+              <Link to="/farmer/onboarding" onClick={() => setIsMenuOpen(false)}>
+                <Button variant="outline" className="w-full text-xs h-8 text-primary border-primary/30">
+                  <Store className="h-3.5 w-3.5 mr-1.5" /> Become a Verified Farmer
+                </Button>
+              </Link>
+            )}
             {!user && (
               <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                <Button className="w-full">Sign In / Register</Button>
+                <Button className="w-full text-xs h-8">Sign In / Register</Button>
               </Link>
             )}
           </nav>

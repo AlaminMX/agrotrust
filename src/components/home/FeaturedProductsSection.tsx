@@ -56,28 +56,28 @@ export const FeaturedProductsSection = () => {
   }, [selectedState]);
 
   return (
-    <section className="py-12">
+    <section className="py-8 md:py-12">
       <div className="container">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4 md:mb-6">
           <div>
-            <h2 className="text-xl md:text-2xl font-bold text-foreground">Latest Listings</h2>
-            <p className="text-sm text-muted-foreground mt-1">Fresh produce from verified farmers</p>
+            <h2 className="text-lg md:text-2xl font-bold text-foreground">Latest Listings</h2>
+            <p className="text-xs md:text-sm text-muted-foreground mt-0.5">Fresh produce from verified farmers</p>
           </div>
-          <Link to="/products" className="text-sm font-medium text-primary hover:underline">
+          <Link to="/products" className="text-xs md:text-sm font-medium text-primary hover:underline">
             View all →
           </Link>
         </div>
         
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <div className="flex items-center justify-center py-12 md:py-16">
+            <Loader2 className="h-5 w-5 md:h-6 md:w-6 animate-spin text-primary" />
           </div>
         ) : products.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-muted-foreground">No products available yet</p>
+          <div className="text-center py-12 md:py-16">
+            <p className="text-muted-foreground text-sm">No products available yet</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4">
             {products.map(product => (
               <JumiaProductCard key={product.id} product={product} showState={selectedState === 'all'} />
             ))}
@@ -85,9 +85,9 @@ export const FeaturedProductsSection = () => {
         )}
         
         {products.length > 0 && (
-          <div className="text-center mt-8">
+          <div className="text-center mt-6 md:mt-8">
             <Link to="/products">
-              <Button size="lg" variant="outline" className="font-semibold">
+              <Button size="default" variant="outline" className="font-semibold text-sm">
                 Browse All Listings
               </Button>
             </Link>
