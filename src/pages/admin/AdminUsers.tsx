@@ -9,8 +9,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Loader2, Search, Users, ShieldCheck, Tractor, UserX, 
-  CheckCircle, XCircle, AlertTriangle, Trash2 
+  CheckCircle, XCircle, AlertTriangle, Trash2, ShieldOff, ShieldAlert
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { BackButton } from '@/components/ui/BackButton';
 import {
   AlertDialog,
@@ -50,6 +58,7 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [makeAdminDialog, setMakeAdminDialog] = useState<{ userId: string; isFarmer: boolean } | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -120,7 +129,7 @@ export default function AdminUsers() {
     }
   };
 
-  const promoteToAdmin = async (userId: string) => {
+  const promoteToAdmin = async (userId: string, keepFarmerRole: boolean) => {
     try {
       const { error } = await supabase
         .from('user_roles')
@@ -128,22 +137,120 @@ export default function AdminUsers() {
 
       if (error) throw error;
 
-      setUsers(users.map(u => 
-        u.user_id === userId ? { ...u, roles: [...u.roles, 'admin'] } : u
+      if (!keepFarmerRole) {
+        // Remove farmer role
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId)
+          .eq('role', 'farmer');
+
+        // Unlist all farmer products
+        const user = users.find(u => u.user_id === userId);
+        if (user?.farmerProfile?.id) {
+          await supabase
+            .from('products')
+            .update({ is_active: false })
+            .eq('farmer_id', user.farmerProfile.id);
+        }
+
+        // Set farmer profile as rejected so products are hidden
+        await supabase
+          .from('farmer_profiles')
+          .update({ verification_status: 'rejected' })
+          .eq('user_id', userId);
+      }
+
+      setUsers(users.map(u => {
+        if (u.user_id !== userId) return u;
+        const newRoles = [...u.roles.filter(r => keepFarmerRole || r !== 'farmer'), 'admin'];
+        return {
+          ...u,
+          roles: newRoles,
+          farmerProfile: keepFarmerRole ? u.farmerProfile : null,
+        };
+      }));
+
+      setMakeAdminDialog(null);
+      toast({
+        title: 'User Promoted to Admin',
+        description: keepFarmerRole
+          ? 'User now has both Admin and Farmer access.'
+          : 'User is now Admin. Farmer role and product listings have been removed.',
+      });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const revokeAdmin = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId)
+        .eq('role', 'admin');
+
+      if (error) throw error;
+
+      setUsers(users.map(u =>
+        u.user_id === userId ? { ...u, roles: u.roles.filter(r => r !== 'admin') } : u
+      ));
+
+      toast({ title: 'Admin Revoked', description: 'Admin access has been removed from this user.' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const revokeFarmer = async (userId: string) => {
+    try {
+      // Remove farmer role
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId)
+        .eq('role', 'farmer');
+
+      // Find the farmer profile id
+      const user = users.find(u => u.user_id === userId);
+      if (user?.farmerProfile?.id) {
+        // Unlist all their products
+        await supabase
+          .from('products')
+          .update({ is_active: false })
+          .eq('farmer_id', user.farmerProfile.id);
+
+        // Mark profile as rejected so it's hidden from public
+        const { error } = await supabase
+          .from('farmer_profiles')
+          .update({ verification_status: 'rejected' })
+          .eq('user_id', userId);
+
+        if (error) throw error;
+      }
+
+      setUsers(users.map(u =>
+        u.user_id === userId
+          ? {
+              ...u,
+              roles: u.roles.filter(r => r !== 'farmer'),
+              farmerProfile: u.farmerProfile
+                ? { ...u.farmerProfile, verification_status: 'rejected' }
+                : null,
+            }
+          : u
       ));
 
       toast({
-        title: 'User Promoted',
-        description: 'User has been granted admin access',
+        title: 'Farmer Revoked',
+        description: 'Farmer role removed and all product listings have been hidden.',
       });
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
+
 
   const promoteToFarmer = async (userId: string) => {
     try {
@@ -484,7 +591,7 @@ export default function AdminUsers() {
                         <TableCell>{formatDate(user.created_at)}</TableCell>
                         <TableCell>
                           <div className="flex gap-2 flex-wrap">
-                            {/* Farmer Approval Actions */}
+                            {/* Farmer Approval Actions (pending farmers) */}
                             {isPendingFarmer && (
                               <>
                                 <Button
@@ -507,8 +614,40 @@ export default function AdminUsers() {
                               </>
                             )}
 
-                            {/* Convert to Farmer */}
-                            {!user.farmerProfile && !user.roles.includes('farmer') && (
+                            {/* Revoke Farmer — show for approved farmers */}
+                            {user.roles.includes('farmer') &&
+                              user.farmerProfile?.verification_status === 'approved' && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="sm" variant="destructive">
+                                    <UserX className="h-4 w-4 mr-1" />
+                                    Revoke Farmer
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Revoke Farmer Status</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will remove the farmer role from <strong>{user.full_name || user.email}</strong> and hide all their product listings. Their listings will reappear if they are made a farmer again.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => revokeFarmer(user.user_id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Revoke Farmer
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+
+                            {/* Make Farmer — show for non-farmers (including admins) */}
+                            {!user.roles.includes('farmer') &&
+                              (!user.farmerProfile || user.farmerProfile.verification_status !== 'approved') &&
+                              !isPendingFarmer && (
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -519,16 +658,54 @@ export default function AdminUsers() {
                               </Button>
                             )}
 
-                            {/* Promote to Admin */}
+                            {/* Make Admin — show for non-admins, triggers dialog if user is a farmer */}
                             {!user.roles.includes('admin') && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => promoteToAdmin(user.user_id)}
+                                onClick={() => {
+                                  const isFarmer =
+                                    user.roles.includes('farmer') &&
+                                    user.farmerProfile?.verification_status === 'approved';
+                                  if (isFarmer) {
+                                    setMakeAdminDialog({ userId: user.user_id, isFarmer: true });
+                                  } else {
+                                    promoteToAdmin(user.user_id, false);
+                                  }
+                                }}
                               >
                                 <ShieldCheck className="h-4 w-4 mr-1" />
                                 Make Admin
                               </Button>
+                            )}
+
+                            {/* Revoke Admin */}
+                            {user.roles.includes('admin') && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="sm" variant="outline" className="text-destructive border-destructive/40 hover:bg-destructive/10">
+                                    <ShieldOff className="h-4 w-4 mr-1" />
+                                    Revoke Admin
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Revoke Admin Access</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will remove admin access from <strong>{user.full_name || user.email}</strong>. They will become a regular user (or farmer if they have that role).
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => revokeAdmin(user.user_id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Revoke Admin
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             )}
 
                             {/* Delete User */}
@@ -579,6 +756,45 @@ export default function AdminUsers() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Make Admin dialog — asks what to do with farmer role */}
+      <Dialog open={!!makeAdminDialog} onOpenChange={(open) => { if (!open) setMakeAdminDialog(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Make User an Admin</DialogTitle>
+            <DialogDescription>
+              This user is currently an approved farmer. What should happen to their farmer status?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 py-2">
+            <Button
+              variant="outline"
+              className="justify-start h-auto py-3 px-4"
+              onClick={() => makeAdminDialog && promoteToAdmin(makeAdminDialog.userId, true)}
+            >
+              <ShieldCheck className="h-5 w-5 mr-3 text-primary shrink-0" />
+              <div className="text-left">
+                <p className="font-semibold">Keep Farmer Role</p>
+                <p className="text-xs text-muted-foreground mt-0.5">User will have both Admin and Farmer access. Listings stay active.</p>
+              </div>
+            </Button>
+            <Button
+              variant="outline"
+              className="justify-start h-auto py-3 px-4 border-destructive/40 hover:bg-destructive/5"
+              onClick={() => makeAdminDialog && promoteToAdmin(makeAdminDialog.userId, false)}
+            >
+              <UserX className="h-5 w-5 mr-3 text-destructive shrink-0" />
+              <div className="text-left">
+                <p className="font-semibold">Remove Farmer Role</p>
+                <p className="text-xs text-muted-foreground mt-0.5">User becomes Admin only. All product listings will be hidden.</p>
+              </div>
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setMakeAdminDialog(null)}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
