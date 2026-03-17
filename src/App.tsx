@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import TrustAndSafety from "./pages/TrustAndSafety";
+import HowItWorks from "./pages/HowItWorks";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import FarmerProfile from "./pages/FarmerProfile";
@@ -43,10 +44,11 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/home" element={<Index />} />
               <Route path="/products" element={<Products />} />
-              <Route path="/products/:state" element={<Products />} />
+              {/* /products/id/:id MUST come before /products/:state to avoid 'id' being treated as a state */}
               <Route path="/products/id/:id" element={<ProductDetail />} />
+              <Route path="/products/:state" element={<Products />} />
               <Route path="/trust-and-safety" element={<TrustAndSafety />} />
-              <Route path="/how-it-works" element={<TrustAndSafety />} />
+              <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/farmers/:id" element={<FarmerProfile />} />
