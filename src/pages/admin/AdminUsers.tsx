@@ -5,11 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Loader2, Search, Users, ShieldCheck, Tractor, UserX, 
-  CheckCircle, XCircle, AlertTriangle, Trash2, ShieldOff, ShieldAlert
+import {
+  Loader2, Search, Users, ShieldCheck, Tractor, UserX,
+  CheckCircle, XCircle, AlertTriangle, Trash2, ShieldOff,
 } from 'lucide-react';
 import {
   Dialog,
@@ -58,7 +58,7 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
-  const [makeAdminDialog, setMakeAdminDialog] = useState<{ userId: string; isFarmer: boolean } | null>(null);
+  const [makeAdminDialog, setMakeAdminDialog] = useState<{ userId: string } | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -66,7 +66,6 @@ export default function AdminUsers() {
 
   const loadUsers = async () => {
     try {
-      // Load profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -74,12 +73,10 @@ export default function AdminUsers() {
 
       if (profilesError) throw profilesError;
 
-      // Load all farmer profiles
       const { data: farmerProfiles } = await supabase
         .from('farmer_profiles')
         .select('id, user_id, farm_name, state, verification_status');
 
-      // Create farmer profile lookup by user_id
       const farmerProfileMap = new Map<string, FarmerProfile>();
       farmerProfiles?.forEach(fp => {
         farmerProfileMap.set(fp.user_id, {
@@ -90,7 +87,6 @@ export default function AdminUsers() {
         });
       });
 
-      // Load roles for each user
       const usersWithRoles = await Promise.all(
         (profiles || []).map(async (profile) => {
           const { data: roles } = await supabase
@@ -99,12 +95,9 @@ export default function AdminUsers() {
             .eq('user_id', profile.user_id);
 
           const userRoles = roles?.map(r => r.role) || [];
-          
-          // Check if user has farmer profile (even without farmer role)
           const farmerProfile = farmerProfileMap.get(profile.user_id) || null;
-          
-          // If user has farmer profile but no farmer role, they're a self-registered farmer
-          if (farmerProfile && !userRoles.includes('farmer')) {
+
+          if (farmerProfile && farmerProfile.verification_status === 'approved' && !userRoles.includes('farmer')) {
             userRoles.push('farmer');
           }
 
@@ -119,55 +112,54 @@ export default function AdminUsers() {
       setUsers(usersWithRoles);
     } catch (error: any) {
       console.error('Error loading users:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load users',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to load users', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
+  // keepFarmerRole: true = keep farmer role & listings, false = strip farmer role & hide listings
   const promoteToAdmin = async (userId: string, keepFarmerRole: boolean) => {
     try {
-      const { error } = await supabase
+      const { error: adminError } = await supabase
         .from('user_roles')
         .insert({ user_id: userId, role: 'admin' });
 
-      if (error) throw error;
+      if (adminError && !adminError.message.includes('duplicate')) throw adminError;
 
       if (!keepFarmerRole) {
-        // Remove farmer role
         await supabase
           .from('user_roles')
           .delete()
           .eq('user_id', userId)
           .eq('role', 'farmer');
 
-        // Unlist all farmer products
-        const user = users.find(u => u.user_id === userId);
-        if (user?.farmerProfile?.id) {
+        const target = users.find(u => u.user_id === userId);
+        if (target?.farmerProfile?.id) {
           await supabase
             .from('products')
             .update({ is_active: false })
-            .eq('farmer_id', user.farmerProfile.id);
-        }
+            .eq('farmer_id', target.farmerProfile.id);
 
-        // Set farmer profile as rejected so products are hidden
-        await supabase
-          .from('farmer_profiles')
-          .update({ verification_status: 'rejected' })
-          .eq('user_id', userId);
+          await supabase
+            .from('farmer_profiles')
+            .update({ verification_status: 'rejected' })
+            .eq('user_id', userId);
+        }
       }
 
-      setUsers(users.map(u => {
+      setUsers(prev => prev.map(u => {
         if (u.user_id !== userId) return u;
-        const newRoles = [...u.roles.filter(r => keepFarmerRole || r !== 'farmer'), 'admin'];
+        const newRoles = [...u.roles.filter(r => keepFarmerRole || r !== 'farmer')];
+        if (!newRoles.includes('admin')) newRoles.push('admin');
         return {
           ...u,
           roles: newRoles,
-          farmerProfile: keepFarmerRole ? u.farmerProfile : null,
+          farmerProfile: keepFarmerRole
+            ? u.farmerProfile
+            : u.farmerProfile
+              ? { ...u.farmerProfile, verification_status: 'rejected' }
+              : null,
         };
       }));
 
@@ -175,8 +167,8 @@ export default function AdminUsers() {
       toast({
         title: 'User Promoted to Admin',
         description: keepFarmerRole
-          ? 'User now has both Admin and Farmer access.'
-          : 'User is now Admin. Farmer role and product listings have been removed.',
+          ? 'User now has both Admin and Farmer access. Listings remain active.'
+          : 'User is now Admin only. Farmer role and product listings have been hidden.',
       });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -193,7 +185,7 @@ export default function AdminUsers() {
 
       if (error) throw error;
 
-      setUsers(users.map(u =>
+      setUsers(prev => prev.map(u =>
         u.user_id === userId ? { ...u, roles: u.roles.filter(r => r !== 'admin') } : u
       ));
 
@@ -203,73 +195,50 @@ export default function AdminUsers() {
     }
   };
 
-  const revokeFarmer = async (userId: string) => {
-    try {
-      // Remove farmer role
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId)
-        .eq('role', 'farmer');
-
-      // Find the farmer profile id
-      const user = users.find(u => u.user_id === userId);
-      if (user?.farmerProfile?.id) {
-        // Unlist all their products
-        await supabase
-          .from('products')
-          .update({ is_active: false })
-          .eq('farmer_id', user.farmerProfile.id);
-
-        // Mark profile as rejected so it's hidden from public
-        const { error } = await supabase
-          .from('farmer_profiles')
-          .update({ verification_status: 'rejected' })
-          .eq('user_id', userId);
-
-        if (error) throw error;
-      }
-
-      setUsers(users.map(u =>
-        u.user_id === userId
-          ? {
-              ...u,
-              roles: u.roles.filter(r => r !== 'farmer'),
-              farmerProfile: u.farmerProfile
-                ? { ...u.farmerProfile, verification_status: 'rejected' }
-                : null,
-            }
-          : u
-      ));
-
-      toast({
-        title: 'Farmer Revoked',
-        description: 'Farmer role removed and all product listings have been hidden.',
-      });
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  };
-
-
   const promoteToFarmer = async (userId: string) => {
     try {
-      // Add farmer role
+      const target = users.find(u => u.user_id === userId);
+
+      // Farmer profile exists but was revoked — re-approve and restore products
+      if (target?.farmerProfile?.id) {
+        const { error: updateError } = await supabase
+          .from('farmer_profiles')
+          .update({ verification_status: 'approved', verified_at: new Date().toISOString() })
+          .eq('user_id', userId);
+
+        if (updateError) throw updateError;
+
+        await supabase
+          .from('products')
+          .update({ is_active: true })
+          .eq('farmer_id', target.farmerProfile.id);
+
+        await supabase
+          .from('user_roles')
+          .upsert({ user_id: userId, role: 'farmer' }, { onConflict: 'user_id,role' });
+
+        setUsers(prev => prev.map(u => {
+          if (u.user_id !== userId) return u;
+          const newRoles = u.roles.includes('farmer') ? u.roles : [...u.roles, 'farmer'];
+          return { ...u, roles: newRoles, farmerProfile: { ...u.farmerProfile!, verification_status: 'approved' } };
+        }));
+
+        toast({ title: 'Farmer Reinstated', description: 'Farmer role restored and all product listings are now active again.' });
+        return;
+      }
+
+      // No farmer profile — create from scratch
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({ user_id: userId, role: 'farmer' });
 
-      if (roleError) throw roleError;
+      if (roleError && !roleError.message.includes('duplicate')) throw roleError;
 
-      // Get user profile for default values
-      const user = users.find(u => u.user_id === userId);
-
-      // Create a basic farmer profile
       const { data: newProfile, error: profileError } = await supabase
         .from('farmer_profiles')
         .insert({
           user_id: userId,
-          farm_name: user?.full_name ? `${user.full_name}'s Farm` : 'New Farm',
+          farm_name: target?.full_name ? `${target.full_name}'s Farm` : 'New Farm',
           state: 'kaduna',
           verification_status: 'approved',
           verified_at: new Date().toISOString(),
@@ -279,29 +248,63 @@ export default function AdminUsers() {
 
       if (profileError) throw profileError;
 
-      setUsers(users.map(u => 
-        u.user_id === userId ? { 
-          ...u, 
-          roles: [...u.roles, 'farmer'],
+      setUsers(prev => prev.map(u => {
+        if (u.user_id !== userId) return u;
+        const newRoles = u.roles.includes('farmer') ? u.roles : [...u.roles, 'farmer'];
+        return {
+          ...u,
+          roles: newRoles,
           farmerProfile: {
             id: newProfile.id,
             farm_name: newProfile.farm_name,
             state: newProfile.state,
             verification_status: newProfile.verification_status,
-          }
-        } : u
-      ));
+          },
+        };
+      }));
 
-      toast({
-        title: 'User Promoted to Farmer',
-        description: 'User has been granted farmer access and a farmer profile has been created',
-      });
+      toast({ title: 'User Made Farmer', description: 'Farmer role granted and a farmer profile has been created.' });
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const revokeFarmer = async (userId: string) => {
+    try {
+      const target = users.find(u => u.user_id === userId);
+
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId)
+        .eq('role', 'farmer');
+
+      if (target?.farmerProfile?.id) {
+        await supabase
+          .from('products')
+          .update({ is_active: false })
+          .eq('farmer_id', target.farmerProfile.id);
+
+        const { error } = await supabase
+          .from('farmer_profiles')
+          .update({ verification_status: 'rejected' })
+          .eq('user_id', userId);
+
+        if (error) throw error;
+      }
+
+      setUsers(prev => prev.map(u => {
+        if (u.user_id !== userId) return u;
+        return {
+          ...u,
+          roles: u.roles.filter(r => r !== 'farmer'),
+          farmerProfile: u.farmerProfile ? { ...u.farmerProfile, verification_status: 'rejected' } : null,
+        };
+      }));
+
+      toast({ title: 'Farmer Revoked', description: 'Farmer role removed and all product listings have been hidden.' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
 
@@ -309,36 +312,28 @@ export default function AdminUsers() {
     try {
       const { error } = await supabase
         .from('farmer_profiles')
-        .update({ 
-          verification_status: 'approved',
-          verified_at: new Date().toISOString(),
-        })
+        .update({ verification_status: 'approved', verified_at: new Date().toISOString() })
         .eq('user_id', userId);
 
       if (error) throw error;
 
-      // Also ensure farmer role exists
       await supabase
         .from('user_roles')
         .upsert({ user_id: userId, role: 'farmer' }, { onConflict: 'user_id,role' });
 
-      setUsers(users.map(u => 
-        u.user_id === userId ? { 
-          ...u, 
-          farmerProfile: u.farmerProfile ? { ...u.farmerProfile, verification_status: 'approved' } : null 
-        } : u
+      setUsers(prev => prev.map(u =>
+        u.user_id === userId
+          ? {
+              ...u,
+              roles: u.roles.includes('farmer') ? u.roles : [...u.roles, 'farmer'],
+              farmerProfile: u.farmerProfile ? { ...u.farmerProfile, verification_status: 'approved' } : null,
+            }
+          : u
       ));
 
-      toast({
-        title: 'Farmer Approved',
-        description: 'The farmer has been verified and can now list products',
-      });
+      toast({ title: 'Farmer Approved', description: 'The farmer has been verified and can now list products.' });
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
 
@@ -351,23 +346,15 @@ export default function AdminUsers() {
 
       if (error) throw error;
 
-      setUsers(users.map(u => 
-        u.user_id === userId ? { 
-          ...u, 
-          farmerProfile: u.farmerProfile ? { ...u.farmerProfile, verification_status: 'rejected' } : null 
-        } : u
+      setUsers(prev => prev.map(u =>
+        u.user_id === userId
+          ? { ...u, farmerProfile: u.farmerProfile ? { ...u.farmerProfile, verification_status: 'rejected' } : null }
+          : u
       ));
 
-      toast({
-        title: 'Farmer Rejected',
-        description: 'The farmer application has been rejected',
-      });
+      toast({ title: 'Farmer Rejected', description: 'The farmer application has been rejected.' });
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
 
@@ -380,50 +367,39 @@ export default function AdminUsers() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      setUsers(users.filter(u => u.user_id !== userId));
-
-      toast({
-        title: 'User Deleted',
-        description: 'The user account has been permanently deleted',
-      });
+      setUsers(prev => prev.filter(u => u.user_id !== userId));
+      toast({ title: 'User Deleted', description: 'The user account has been permanently deleted.' });
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Intl.DateTimeFormat('en-NG', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    }).format(new Date(dateString));
-  };
+  const formatDate = (dateString: string) =>
+    new Intl.DateTimeFormat('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(dateString));
 
   const getUserType = (user: User): { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive'; icon: React.ReactNode } => {
+    if (user.roles.includes('admin') && user.roles.includes('farmer')) {
+      return { label: 'Admin + Farmer', variant: 'default', icon: <ShieldCheck className="h-3 w-3" /> };
+    }
     if (user.roles.includes('admin')) {
       return { label: 'Admin', variant: 'default', icon: <ShieldCheck className="h-3 w-3" /> };
     }
     if (user.farmerProfile) {
       const status = user.farmerProfile.verification_status;
-      if (status === 'approved') {
-        return { label: 'Farmer (Approved)', variant: 'secondary', icon: <CheckCircle className="h-3 w-3" /> };
-      }
-      if (status === 'pending' || status === 'under_review') {
-        return { label: 'Farmer (Pending)', variant: 'outline', icon: <AlertTriangle className="h-3 w-3" /> };
-      }
-      if (status === 'rejected') {
-        return { label: 'Farmer (Rejected)', variant: 'destructive', icon: <XCircle className="h-3 w-3" /> };
-      }
+      if (status === 'approved') return { label: 'Farmer', variant: 'secondary', icon: <CheckCircle className="h-3 w-3" /> };
+      if (status === 'pending' || status === 'under_review') return { label: 'Farmer (Pending)', variant: 'outline', icon: <AlertTriangle className="h-3 w-3" /> };
+      if (status === 'rejected') return { label: 'Farmer (Revoked)', variant: 'destructive', icon: <XCircle className="h-3 w-3" /> };
     }
     return { label: 'Consumer', variant: 'outline', icon: <Users className="h-3 w-3" /> };
   };
 
+  const consumers = users.filter(u => !u.farmerProfile && !u.roles.includes('admin'));
+  const farmers = users.filter(u => u.farmerProfile && !u.roles.includes('admin'));
+  const pendingFarmers = farmers.filter(f => f.farmerProfile?.verification_status === 'pending' || f.farmerProfile?.verification_status === 'under_review');
+  const admins = users.filter(u => u.roles.includes('admin'));
+
   const filteredUsers = users.filter(user => {
-    const matchesSearch = 
+    const matchesSearch =
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.phone?.includes(searchTerm) ||
@@ -431,15 +407,10 @@ export default function AdminUsers() {
 
     if (activeTab === 'all') return matchesSearch;
     if (activeTab === 'consumers') return matchesSearch && !user.farmerProfile && !user.roles.includes('admin');
-    if (activeTab === 'farmers') return matchesSearch && user.farmerProfile;
+    if (activeTab === 'farmers') return matchesSearch && !!user.farmerProfile && !user.roles.includes('admin');
     if (activeTab === 'admins') return matchesSearch && user.roles.includes('admin');
     return matchesSearch;
   });
-
-  const consumers = users.filter(u => !u.farmerProfile && !u.roles.includes('admin'));
-  const farmers = users.filter(u => u.farmerProfile);
-  const pendingFarmers = farmers.filter(f => f.farmerProfile?.verification_status === 'pending' || f.farmerProfile?.verification_status === 'under_review');
-  const admins = users.filter(u => u.roles.includes('admin'));
 
   if (loading) {
     return (
@@ -462,7 +433,6 @@ export default function AdminUsers() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <Card>
             <CardHeader className="pb-2">
@@ -546,9 +516,18 @@ export default function AdminUsers() {
                 <TableBody>
                   {filteredUsers.map((user) => {
                     const userType = getUserType(user);
-                    const isPendingFarmer = user.farmerProfile && 
-                      (user.farmerProfile.verification_status === 'pending' || 
-                       user.farmerProfile.verification_status === 'under_review');
+                    const isApprovedFarmer =
+                      user.roles.includes('farmer') &&
+                      user.farmerProfile?.verification_status === 'approved';
+                    const isPendingFarmer =
+                      !!user.farmerProfile &&
+                      (user.farmerProfile.verification_status === 'pending' ||
+                        user.farmerProfile.verification_status === 'under_review');
+                    const isRevokedFarmer =
+                      !!user.farmerProfile &&
+                      user.farmerProfile.verification_status === 'rejected' &&
+                      !user.roles.includes('farmer');
+                    const isAdmin = user.roles.includes('admin');
 
                     return (
                       <TableRow key={user.id} className={isPendingFarmer ? 'bg-amber-50' : ''}>
@@ -589,9 +568,11 @@ export default function AdminUsers() {
                           )}
                         </TableCell>
                         <TableCell>{formatDate(user.created_at)}</TableCell>
+
                         <TableCell>
                           <div className="flex gap-2 flex-wrap">
-                            {/* Farmer Approval Actions (pending farmers) */}
+
+                            {/* Pending farmer: Approve / Reject */}
                             {isPendingFarmer && (
                               <>
                                 <Button
@@ -614,9 +595,25 @@ export default function AdminUsers() {
                               </>
                             )}
 
-                            {/* Revoke Farmer — show for approved farmers */}
-                            {user.roles.includes('farmer') &&
-                              user.farmerProfile?.verification_status === 'approved' && (
+                            {/* Make Farmer / Reinstate Farmer
+                                - Normal users: "Make Farmer"
+                                - Revoked farmers: "Reinstate Farmer"
+                                - Admins without farmer role: "Make Farmer"
+                                - Hidden for: approved farmers, pending farmers */}
+                            {!isApprovedFarmer && !isPendingFarmer && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => promoteToFarmer(user.user_id)}
+                              >
+                                <Tractor className="h-4 w-4 mr-1" />
+                                {isRevokedFarmer ? 'Reinstate Farmer' : 'Make Farmer'}
+                              </Button>
+                            )}
+
+                            {/* Revoke Farmer
+                                - Approved farmers (including admin+farmer combo) */}
+                            {isApprovedFarmer && (
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <Button size="sm" variant="destructive">
@@ -628,7 +625,10 @@ export default function AdminUsers() {
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Revoke Farmer Status</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      This will remove the farmer role from <strong>{user.full_name || user.email}</strong> and hide all their product listings. Their listings will reappear if they are made a farmer again.
+                                      This will remove the farmer role from{' '}
+                                      <strong>{user.full_name || user.email}</strong> and hide all
+                                      their product listings. Their listings will reappear if they
+                                      are reinstated as a farmer.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
@@ -644,31 +644,16 @@ export default function AdminUsers() {
                               </AlertDialog>
                             )}
 
-                            {/* Make Farmer — show for non-farmers (including admins) */}
-                            {!user.roles.includes('farmer') &&
-                              (!user.farmerProfile || user.farmerProfile.verification_status !== 'approved') &&
-                              !isPendingFarmer && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => promoteToFarmer(user.user_id)}
-                              >
-                                <Tractor className="h-4 w-4 mr-1" />
-                                Make Farmer
-                              </Button>
-                            )}
-
-                            {/* Make Admin — show for non-admins, triggers dialog if user is a farmer */}
-                            {!user.roles.includes('admin') && (
+                            {/* Make Admin
+                                - All non-admins
+                                - If approved farmer → open dialog to choose farmer fate */}
+                            {!isAdmin && (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => {
-                                  const isFarmer =
-                                    user.roles.includes('farmer') &&
-                                    user.farmerProfile?.verification_status === 'approved';
-                                  if (isFarmer) {
-                                    setMakeAdminDialog({ userId: user.user_id, isFarmer: true });
+                                  if (isApprovedFarmer) {
+                                    setMakeAdminDialog({ userId: user.user_id });
                                   } else {
                                     promoteToAdmin(user.user_id, false);
                                   }
@@ -679,11 +664,15 @@ export default function AdminUsers() {
                               </Button>
                             )}
 
-                            {/* Revoke Admin */}
-                            {user.roles.includes('admin') && (
+                            {/* Revoke Admin — all admins */}
+                            {isAdmin && (
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  <Button size="sm" variant="outline" className="text-destructive border-destructive/40 hover:bg-destructive/10">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                                  >
                                     <ShieldOff className="h-4 w-4 mr-1" />
                                     Revoke Admin
                                   </Button>
@@ -692,7 +681,10 @@ export default function AdminUsers() {
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Revoke Admin Access</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      This will remove admin access from <strong>{user.full_name || user.email}</strong>. They will become a regular user (or farmer if they have that role).
+                                      This will remove admin access from{' '}
+                                      <strong>{user.full_name || user.email}</strong>. They will
+                                      revert to a regular user (or farmer, if they still have that
+                                      role).
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
@@ -719,7 +711,7 @@ export default function AdminUsers() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Delete User Account</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Are you sure you want to permanently delete this user account? 
+                                    Are you sure you want to permanently delete this user account?
                                     This action cannot be undone and will remove all associated data including:
                                     <ul className="list-disc ml-4 mt-2">
                                       <li>User profile</li>
@@ -739,6 +731,7 @@ export default function AdminUsers() {
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
+
                           </div>
                         </TableCell>
                       </TableRow>
@@ -757,8 +750,11 @@ export default function AdminUsers() {
         </Card>
       </main>
 
-      {/* Make Admin dialog — asks what to do with farmer role */}
-      <Dialog open={!!makeAdminDialog} onOpenChange={(open) => { if (!open) setMakeAdminDialog(null); }}>
+      {/* Make Admin dialog — shown when target is an approved farmer */}
+      <Dialog
+        open={!!makeAdminDialog}
+        onOpenChange={(open) => { if (!open) setMakeAdminDialog(null); }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Make User an Admin</DialogTitle>
@@ -775,7 +771,9 @@ export default function AdminUsers() {
               <ShieldCheck className="h-5 w-5 mr-3 text-primary shrink-0" />
               <div className="text-left">
                 <p className="font-semibold">Keep Farmer Role</p>
-                <p className="text-xs text-muted-foreground mt-0.5">User will have both Admin and Farmer access. Listings stay active.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  User will have both Admin and Farmer access. Listings stay active.
+                </p>
               </div>
             </Button>
             <Button
@@ -786,7 +784,9 @@ export default function AdminUsers() {
               <UserX className="h-5 w-5 mr-3 text-destructive shrink-0" />
               <div className="text-left">
                 <p className="font-semibold">Remove Farmer Role</p>
-                <p className="text-xs text-muted-foreground mt-0.5">User becomes Admin only. All product listings will be hidden.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  User becomes Admin only. All product listings will be hidden.
+                </p>
               </div>
             </Button>
           </div>
