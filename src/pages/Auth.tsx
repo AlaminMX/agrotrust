@@ -8,9 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Leaf } from 'lucide-react';
+import { Loader2, Leaf, MailCheck } from 'lucide-react';
 import { z } from 'zod';
 import { PasswordInput } from '@/components/auth/PasswordInput';
+import { supabase } from '@/integrations/supabase/client';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -24,6 +25,8 @@ export default function Auth() {
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [resending, setResending] = useState(false);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -37,57 +40,240 @@ export default function Auth() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    try { emailSchema.parse(loginEmail); passwordSchema.parse(loginPassword); } catch (err) {
-      if (err instanceof z.ZodError) { toast({ title: 'Validation Error', description: err.errors[0].message, variant: 'destructive' }); return; }
+    try {
+      emailSchema.parse(loginEmail);
+      passwordSchema.parse(loginPassword);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        toast({ title: 'Validation Error', description: err.errors[0].message, variant: 'destructive' });
+        return;
+      }
     }
     setIsLoading(true);
     const { error } = await signIn(loginEmail, loginPassword);
     setIsLoading(false);
-    if (error) { toast({ title: 'Login Failed', description: getLoginErrorMessage(error.message), variant: 'destructive' }); }
-    else { if (rememberMe) localStorage.setItem('agrotrust_remember_me', 'true'); toast({ title: 'Welcome back!' }); navigate('/'); }
+    if (error) {
+      toast({ title: 'Login Failed', description: getLoginErrorMessage(error.message), variant: 'destructive' });
+    } else {
+      if (rememberMe) localStorage.setItem('agrotrust_remember_me', 'true');
+      toast({ title: 'Welcome back!' });
+      navigate('/');
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    try { nameSchema.parse(signupName); emailSchema.parse(signupEmail); passwordSchema.parse(signupPassword); } catch (err) {
-      if (err instanceof z.ZodError) { toast({ title: 'Validation Error', description: err.errors[0].message, variant: 'destructive' }); return; }
+    try {
+      nameSchema.parse(signupName);
+      emailSchema.parse(signupEmail);
+      passwordSchema.parse(signupPassword);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        toast({ title: 'Validation Error', description: err.errors[0].message, variant: 'destructive' });
+        return;
+      }
     }
     setIsLoading(true);
     const { error } = await signUp(signupEmail, signupPassword, signupName);
     setIsLoading(false);
     if (error) {
-      toast({ title: error.message.includes('already registered') ? 'Account Exists' : 'Signup Failed', description: error.message, variant: 'destructive' });
+      const isExisting = error.message.includes('already registered') || error.message.includes('already been registered');
+      toast({
+        title: isExisting ? 'Account Already Exists' : 'Signup Failed',
+        description: isExisting
+          ? 'An account with this email already exists. Please sign in instead.'
+          : error.message,
+        variant: 'destructive',
+      });
     } else {
-      toast({ title: 'Account Created!', description: 'Please check your email to verify your account.' });
+      // Show the verification pending screen
+      setVerificationSent(true);
     }
   };
 
+  const handleResendEmail = async () => {
+    setResending(true);
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: signupEmail,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`,
+      },
+    });
+    setResending(false);
+    if (error) {
+      toast({ title: 'Failed to resend', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Email resent!', description: 'Check your inbox again for the confirmation link.' });
+    }
+  };
+
+  // ── Verification pending screen ──────────────────────────────────────────
+  if (verificationSent) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Leaf className="h-10 w-10 text-primary" />
+              <span className="text-3xl font-bold text-primary">AgroTrust</span>
+            </div>
+          </div>
+          <Card className="border-border/50 shadow-lg">
+            <CardContent className="pt-8 pb-8 text-center space-y-5">
+              <div className="flex justify-center">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <MailCheck className="h-8 w-8 text-primary" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-xl font-bold text-foreground">Check your email</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  We sent a confirmation link to{' '}
+                  <span className="font-medium text-foreground">{signupEmail}</span>.
+                  Click the link in the email to activate your account.
+                </p>
+              </div>
+              <div className="bg-muted/60 rounded-lg px-4 py-3 text-xs text-muted-foreground text-left space-y-1">
+                <p>• Check your spam/junk folder if you don't see it</p>
+                <p>• The link expires after 24 hours</p>
+                <p>• You must verify before you can sign in</p>
+              </div>
+              <div className="space-y-3 pt-1">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleResendEmail}
+                  disabled={resending}
+                >
+                  {resending ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Resending...</>
+                  ) : (
+                    'Resend confirmation email'
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full text-muted-foreground"
+                  onClick={() => {
+                    setVerificationSent(false);
+                    setSignupEmail('');
+                    setSignupPassword('');
+                    setSignupName('');
+                  }}
+                >
+                  Use a different email
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Normal auth form ─────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4"><Leaf className="h-10 w-10 text-primary" /><span className="text-3xl font-bold text-primary">AgroTrust</span></div>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Leaf className="h-10 w-10 text-primary" />
+            <span className="text-3xl font-bold text-primary">AgroTrust</span>
+          </div>
           <p className="text-muted-foreground">Connect directly with verified Nigerian farmers</p>
         </div>
         <Card className="border-border/50 shadow-lg">
-          <CardHeader className="text-center"><CardTitle>Welcome</CardTitle><CardDescription>Sign in or create an account</CardDescription></CardHeader>
+          <CardHeader className="text-center">
+            <CardTitle>Welcome</CardTitle>
+            <CardDescription>Sign in or create an account</CardDescription>
+          </CardHeader>
           <CardContent>
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="login">Login</TabsTrigger><TabsTrigger value="signup">Sign Up</TabsTrigger></TabsList>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Login</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              </TabsList>
+
+              {/* ── Login tab ── */}
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4 mt-4">
-                  <div className="space-y-2"><Label htmlFor="login-email">Email</Label><Input id="login-email" type="email" placeholder="you@example.com" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required /></div>
-                  <div className="space-y-2"><Label htmlFor="login-password">Password</Label><PasswordInput id="login-password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required /></div>
-                  <div className="flex items-center space-x-2"><Checkbox id="remember-me" checked={rememberMe} onCheckedChange={(c) => setRememberMe(c as boolean)} /><Label htmlFor="remember-me" className="text-sm font-normal text-muted-foreground cursor-pointer">Remember me</Label></div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing in...</> : 'Sign In'}</Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <Input
+                      id="login-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Password</Label>
+                    <PasswordInput
+                      id="login-password"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="remember-me"
+                      checked={rememberMe}
+                      onCheckedChange={(c) => setRememberMe(c as boolean)}
+                    />
+                    <Label htmlFor="remember-me" className="text-sm font-normal text-muted-foreground cursor-pointer">
+                      Remember me
+                    </Label>
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing in...</> : 'Sign In'}
+                  </Button>
                 </form>
               </TabsContent>
+
+              {/* ── Sign Up tab ── */}
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4 mt-4">
-                  <div className="space-y-2"><Label htmlFor="signup-name">Full Name</Label><Input id="signup-name" type="text" placeholder="John Doe" value={signupName} onChange={(e) => setSignupName(e.target.value)} required /></div>
-                  <div className="space-y-2"><Label htmlFor="signup-email">Email</Label><Input id="signup-email" type="email" placeholder="you@example.com" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} required /></div>
-                  <div className="space-y-2"><Label htmlFor="signup-password">Password</Label><PasswordInput id="signup-password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} showStrength required /></div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating account...</> : 'Create Account'}</Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-name">Full Name</Label>
+                    <Input
+                      id="signup-name"
+                      type="text"
+                      placeholder="John Doe"
+                      value={signupName}
+                      onChange={(e) => setSignupName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Password</Label>
+                    <PasswordInput
+                      id="signup-password"
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      showStrength
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading
+                      ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating account...</>
+                      : 'Create Account'}
+                  </Button>
                 </form>
               </TabsContent>
             </Tabs>
