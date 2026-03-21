@@ -15,7 +15,6 @@ import { CATEGORIES } from '@/types';
 import { AreaInput } from '@/components/ui/AreaInput';
 import { useStates } from '@/hooks/useStates';
 import { normalizeNigerianPhone } from '@/lib/phone';
-import { FarmerBottomNav } from '@/components/layout/FarmerBottomNav';
 
 type Step = 'details' | 'documents' | 'review';
 
@@ -113,7 +112,11 @@ export default function FarmerOnboarding() {
     }
   };
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (authLoading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
 
   if (existingProfile?.verification_status === 'pending' || existingProfile?.verification_status === 'under_review') {
     return (
@@ -295,7 +298,6 @@ export default function FarmerOnboarding() {
           )}
         </Card>
       </div>
-      <FarmerBottomNav />
     </div>
   );
 }
