@@ -264,6 +264,17 @@ export const JumiaHeader = () => {
               </Link>
             )}
 
+            {/* Sign Out — only for logged-in users */}
+            {user && (
+              <Button
+                variant="ghost"
+                className="w-full text-xs h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={async () => { setIsMenuOpen(false); await signOut(); }}
+              >
+                <LogOut className="h-3.5 w-3.5 mr-1.5" /> Sign Out
+              </Button>
+            )}
+
             {/* Sign In — only for guests */}
             {!user && (
               <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
