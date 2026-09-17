@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
+import { Seo, SITE_URL } from '@/components/Seo';
 import { Button } from '@/components/ui/button';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { BackButton } from '@/components/ui/BackButton';
@@ -106,11 +107,6 @@ const ProductDetail = () => {
     fetchProduct();
   }, [id]);
 
-  useEffect(() => {
-    if (!product) return;
-    document.title = `${product.name} in ${formatLocation(product.state, product.area)} | AgroTrust`;
-  }, [product]);
-
   if (loading) {
     return <Layout><div className="container py-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></Layout>;
   }
@@ -136,6 +132,33 @@ const ProductDetail = () => {
   const availabilityStatus = getAvailabilityStatus(product.available);
   const availabilityColor = getAvailabilityColor(availabilityStatus);
 
+  const productLocation = formatLocation(product.state, product.area);
+  const pageTitle = `${product.name} in ${productLocation}`;
+  const pageDescription =
+    product.description ||
+    `${product.name} available from ${product.farmName} in ${productLocation} — ${formatPrice(product.price)} per ${product.unit}. Contact the farmer directly on AgroTrust.`;
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: pageDescription,
+    image: product.image,
+    offers: {
+      '@type': 'Offer',
+      price: product.price,
+      priceCurrency: 'NGN',
+      availability:
+        availabilityStatus === 'Out of Stock'
+          ? 'https://schema.org/OutOfStock'
+          : 'https://schema.org/InStock',
+      url: `${SITE_URL}/products/id/${product.id}`,
+    },
+    brand: {
+      '@type': 'Brand',
+      name: product.farmName,
+    },
+  };
+
   const submitReport = async () => {
     if (!product) return;
     setReporting(true);
@@ -156,6 +179,13 @@ const ProductDetail = () => {
 
   return (
     <Layout>
+      <Seo
+        title={pageTitle}
+        description={pageDescription}
+        path={`/products/id/${product.id}`}
+        image={product.image}
+        jsonLd={productJsonLd}
+      />
       <div className="container py-6 md:py-8">
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
           <BackButton fallbackPath="/products" />
