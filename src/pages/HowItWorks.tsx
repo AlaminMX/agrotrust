@@ -60,7 +60,7 @@ const HowItWorks = () => {
         <div className="container">
           <div className="flex items-center gap-2 mb-6"><BackButton fallbackPath="/" /></div>
           <div className="text-center">
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Trust & Safety</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">How It Works</h1>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               How AgroTrust ensures a safe, transparent marketplace connecting buyers directly with verified farmers.
             </p>
