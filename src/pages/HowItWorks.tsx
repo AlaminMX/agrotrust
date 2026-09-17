@@ -1,4 +1,5 @@
 import { Layout } from '@/components/layout/Layout';
+import { Seo } from '@/components/Seo';
 import { HowItWorksSection } from '@/components/home/HowItWorksSection';
 import { BackButton } from '@/components/ui/BackButton';
 import { Shield, Users, MessageCircle, ShieldCheck, HelpCircle } from 'lucide-react';
@@ -50,6 +51,11 @@ const faqs = [
 const HowItWorks = () => {
   return (
     <Layout>
+      <Seo
+        title="How It Works"
+        description="See how AgroTrust connects verified farmers with buyers across Nigeria — from browsing listings to contacting a farmer directly."
+        path="/how-it-works"
+      />
       <section className="py-16 bg-secondary/50">
         <div className="container">
           <div className="flex items-center gap-2 mb-6"><BackButton fallbackPath="/" /></div>
