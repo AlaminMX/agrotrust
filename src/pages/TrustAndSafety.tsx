@@ -1,4 +1,5 @@
 import { Layout } from '@/components/layout/Layout';
+import { Seo } from '@/components/Seo';
 import { BackButton } from '@/components/ui/BackButton';
 import { Shield, Users, CheckCircle, HelpCircle, Flag, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -53,6 +54,11 @@ const faqs = [
 const TrustAndSafety = () => {
   return (
     <Layout>
+      <Seo
+        title="Trust & Safety"
+        description="How AgroTrust verifies farmers, protects buyers, and keeps the marketplace safe — from identity checks to reporting suspicious listings."
+        path="/trust-and-safety"
+      />
       <section className="py-16 bg-muted/30">
         <div className="container">
           <div className="flex items-center gap-2 mb-6"><BackButton fallbackPath="/" /></div>
