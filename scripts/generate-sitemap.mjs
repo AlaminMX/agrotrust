@@ -15,7 +15,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 
 // TODO: update once a custom domain is connected in Vercel (see src/components/Seo.tsx too).
-const SITE_URL = 'https://agrotrust.lovable.app';
+const SITE_URL = 'https://agro-trust.vercel.app';
 
 function loadEnv() {
   const envPath = join(ROOT, '.env');
