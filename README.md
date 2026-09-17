@@ -1,73 +1,81 @@
-# Welcome to your Lovable project
+# AgroTrust
 
-## Project info
+AgroTrust is a discovery and trust platform that connects verified farmers directly with buyers across Nigeria. Farmers list their produce with location, price, and availability; buyers browse, vet a farmer's profile, and reach out directly by phone, WhatsApp, or email to arrange the sale. AgroTrust doesn't process payments or handle delivery — it's the trusted directory that gets a buyer and a farmer talking.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Features
 
-## How can I edit this code?
+**For buyers**
+- Browse fresh produce by category and by state/area
+- View a farmer's verified profile before reaching out
+- Contact farmers directly via phone, WhatsApp, or email
+- Flag suspicious listings or profiles
 
-There are several ways of editing your application.
+**For farmers**
+- Create a farm profile and go through identity/farm verification
+- List and manage products (price, unit, availability, photos)
+- Get discovered by buyers searching their state or category
+- Receive WhatsApp notifications on new interest
 
-**Use Lovable**
+**For admins**
+- Review and approve/reject farmer verification requests
+- Moderate listings and handle user reports
+- Manage locations, categories, and platform users
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Tech stack
 
-Changes made via Lovable will be committed automatically to this repo.
+- [Vite](https://vitejs.dev/) + [React](https://react.dev/) + TypeScript
+- [shadcn-ui](https://ui.shadcn.com/) + [Tailwind CSS](https://tailwindcss.com/)
+- [Supabase](https://supabase.com/) (Postgres, Auth, Storage, Edge Functions)
+- [react-helmet-async](https://github.com/staylor/react-helmet-async) for per-page SEO metadata
 
-**Use your preferred IDE**
+## Getting started
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+**Requirements:** Node.js & npm ([install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating))
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
+# 1. Clone the repository
 git clone <YOUR_GIT_URL>
+cd agrotrust
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# 2. Install dependencies
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
+# 3. Set up environment variables
+cp .env.example .env
+# then fill in your Supabase project's URL, project ID, and publishable key
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# 4. Start the dev server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Available scripts
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+| Script | What it does |
+|---|---|
+| `npm run dev` | Starts the local dev server with hot reload |
+| `npm run build` | Builds for production (also regenerates `public/sitemap.xml` first) |
+| `npm run build:dev` | Production build in development mode, for debugging build output |
+| `npm run generate-sitemap` | Regenerates `public/sitemap.xml` from live product/farmer data on its own |
+| `npm run lint` | Runs ESLint across the project |
+| `npm run preview` | Serves the built `dist/` folder locally |
 
-**Use GitHub Codespaces**
+## Deployment
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+The project deploys to [Vercel](https://vercel.com/). Push to your connected branch and Vercel builds and deploys automatically — make sure the same environment variables from `.env.example` are set in your Vercel project settings (Project → Settings → Environment Variables).
 
-## What technologies are used for this project?
+If you're on the default `*.vercel.app` domain, consider connecting a custom domain in Vercel's domain settings — it's more trustworthy to visitors and avoids search engines displaying "Vercel" as the site name instead of "AgroTrust."
 
-This project is built with:
+## Project structure
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```
+src/
+  components/   Reusable UI (including Seo.tsx for per-page metadata)
+  pages/        Route-level pages (buyer, farmer, and admin views)
+  hooks/        Shared React hooks (auth, etc.)
+  integrations/ Supabase client setup
+supabase/
+  migrations/   Database schema history
+  functions/    Edge functions (verification emails, WhatsApp notifications, account deletion)
+scripts/
+  generate-sitemap.mjs   Builds public/sitemap.xml from live Supabase data
+```
