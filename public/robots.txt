@@ -8,4 +8,4 @@ Disallow: /farmer/products/
 Disallow: /admin
 Disallow: /admin/
 
-Sitemap: https://agrotrust.lovable.app/sitemap.xml
+Sitemap: https://agro-trust.vercel.app/sitemap.xml
