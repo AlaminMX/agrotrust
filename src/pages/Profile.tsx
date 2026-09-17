@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
+import { Seo } from '@/components/Seo';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -86,6 +87,7 @@ export default function Profile() {
 
   return (
     <Layout>
+      <Seo title="My Profile" description="Manage your AgroTrust account." noindex />
       <div className="bg-muted/30 py-8">
         <div className="container">
           <div className="flex items-center gap-4">
@@ -150,4 +152,4 @@ export default function Profile() {
       </div>
     </Layout>
   );
-}
+  }
