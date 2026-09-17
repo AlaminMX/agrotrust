@@ -87,7 +87,7 @@ export const JumiaHeader = () => {
       {/* Main bar */}
       <div className="container py-2 md:py-3">
         <div className="flex items-center gap-2 md:gap-3">
-          <Button variant="ghost" size="icon" className="lg:hidden shrink-0 h-8 w-8 md:h-9 md:w-9" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+          <Button variant="ghost" size="icon" aria-label={isMenuOpen ? 'Close menu' : 'Open menu'} className="lg:hidden shrink-0 h-8 w-8 md:h-9 md:w-9" onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X className="h-4 w-4 md:h-5 md:w-5" /> : <Menu className="h-4 w-4 md:h-5 md:w-5" />}
           </Button>
 
@@ -107,13 +107,13 @@ export const JumiaHeader = () => {
                 placeholder="Search produce, farmers, areas..."
                 className="w-full h-9 md:h-10 pl-4 pr-12 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
               />
-              <button type="submit" className="absolute right-0 top-0 h-9 md:h-10 w-9 md:w-10 flex items-center justify-center bg-primary text-primary-foreground rounded-r-lg hover:bg-primary/90 transition-colors">
+              <button type="submit" aria-label="Search" className="absolute right-0 top-0 h-9 md:h-10 w-9 md:w-10 flex items-center justify-center bg-primary text-primary-foreground rounded-r-lg hover:bg-primary/90 transition-colors">
                 <Search className="h-4 w-4" />
               </button>
             </div>
           </form>
 
-          <Button variant="ghost" size="icon" className="md:hidden shrink-0 h-8 w-8" onClick={() => setIsSearchOpen(!isSearchOpen)}>
+          <Button variant="ghost" size="icon" aria-label={isSearchOpen ? 'Close search' : 'Open search'} className="md:hidden shrink-0 h-8 w-8" onClick={() => setIsSearchOpen(!isSearchOpen)}>
             <Search className="h-4 w-4" />
           </Button>
 
@@ -202,7 +202,7 @@ export const JumiaHeader = () => {
               autoFocus
               className="w-full h-9 pl-4 pr-12 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
             />
-            <button type="submit" className="absolute right-0 top-0 h-9 w-9 flex items-center justify-center bg-primary text-primary-foreground rounded-r-lg">
+            <button type="submit" aria-label="Search" className="absolute right-0 top-0 h-9 w-9 flex items-center justify-center bg-primary text-primary-foreground rounded-r-lg">
               <Search className="h-4 w-4" />
             </button>
           </form>
