@@ -126,7 +126,7 @@ export const JumiaHeader = () => {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="hidden sm:flex items-center gap-1.5 h-8 md:h-10 px-2 md:px-3">
+                  <Button variant="ghost" aria-label="Account menu" className="hidden sm:flex items-center gap-1.5 h-8 md:h-10 px-2 md:px-3">
                     <User className="h-4 w-4 md:h-5 md:w-5" />
                     <ChevronDown className="h-3 w-3" />
                   </Button>
@@ -163,7 +163,7 @@ export const JumiaHeader = () => {
               </DropdownMenu>
             ) : (
               <Button variant="ghost" className="hidden sm:flex items-center gap-1.5 h-8 md:h-10 px-2 md:px-3" asChild>
-                <Link to="/auth">
+                <Link to="/auth" aria-label="Sign in">
                   <User className="h-4 w-4 md:h-5 md:w-5" />
                   <span className="hidden md:inline text-sm">Sign In</span>
                 </Link>
