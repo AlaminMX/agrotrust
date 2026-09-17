@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment variables — never commit this, it's your local/deploy config.
+# Copy .env.example to .env and fill in real values instead.
+.env
+.env.local
+.env.*.local
