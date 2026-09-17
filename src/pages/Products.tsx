@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
+import { Seo } from '@/components/Seo';
 import { ProductCard } from '@/components/products/ProductCard';
 import { StateBanner } from '@/components/products/StateBanner';
 import { CategoryFilter } from '@/components/products/CategoryFilter';
@@ -60,10 +61,13 @@ const Products = () => {
     if (categoryParam) setCategory(categoryParam as ProductCategory);
   }, [routeState, searchParams, setSelectedState]);
 
-  useEffect(() => {
-    const stateLabel = STATES.find((s) => s.value === selectedState)?.label || 'Nigeria';
-    document.title = selectedState === 'all' ? 'Browse Farm Products in Nigeria | AgroTrust' : `Fresh Farm Produce in ${stateLabel} | AgroTrust`;
-  }, [selectedState]);
+  const stateLabel = STATES.find((s) => s.value === selectedState)?.label || 'Nigeria';
+  const pageTitle = selectedState === 'all' ? 'Browse Farm Products in Nigeria' : `Fresh Farm Produce in ${stateLabel}`;
+  const pageDescription =
+    selectedState === 'all'
+      ? 'Browse fresh vegetables, fruits, grains, and more from verified farmers across Nigeria on AgroTrust.'
+      : `Browse fresh vegetables, fruits, grains, and more from verified farmers in ${stateLabel} on AgroTrust.`;
+  const pagePath = selectedState === 'all' ? '/products' : `/products/${selectedState}`;
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -136,6 +140,7 @@ const Products = () => {
 
   return (
     <Layout>
+      <Seo title={pageTitle} description={pageDescription} path={pagePath} />
       <div className="bg-muted/30 py-8">
         <div className="container">
           <h1 className="text-3xl font-bold text-foreground mb-2">Browse Listings</h1>
