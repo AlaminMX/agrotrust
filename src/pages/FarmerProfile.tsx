@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
+import { Seo, SITE_URL } from '@/components/Seo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
@@ -112,8 +113,33 @@ export default function FarmerProfile() {
     } finally { setReporting(false); }
   };
 
+  const farmLocation = [farmer.area, farmer.state].filter(Boolean).join(', ') || farmer.state;
+  const pageTitle = `${farmer.farm_name} in ${farmLocation}`;
+  const pageDescription =
+    farmer.farm_description ||
+    `${farmer.farm_name} is a verified farmer on AgroTrust based in ${farmLocation}, Nigeria. Browse their listings and contact them directly.`;
+  const farmerJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: farmer.farm_name,
+    description: pageDescription,
+    address: {
+      '@type': 'PostalAddress',
+      addressRegion: farmer.state,
+      addressLocality: farmer.area || undefined,
+      addressCountry: 'NG',
+    },
+    url: `${SITE_URL}/farmers/${farmer.id}`,
+  };
+
   return (
     <Layout>
+      <Seo
+        title={pageTitle}
+        description={pageDescription}
+        path={`/farmers/${farmer.id}`}
+        jsonLd={farmerJsonLd}
+      />
       <div className="container py-6 md:py-8">
         <div className="flex items-center gap-2 mb-6">
           <BackButton fallbackPath="/products" />
